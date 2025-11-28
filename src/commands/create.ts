@@ -115,7 +115,7 @@ async function handleAICreate(
           return undefined;
         }
 
-        return showAIPreview(prompt, response, storage);
+        return showAIPreview(prompt, response, storage, aiProvider);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         vscode.window.showErrorMessage(`Failed to generate command: ${message}`);
@@ -131,7 +131,8 @@ async function handleAICreate(
 async function showAIPreview(
   prompt: string,
   response: AIResponse,
-  storage: StorageService
+  storage: StorageService,
+  aiProvider: AIProvider
 ): Promise<CLICommand | undefined> {
   // Create quick pick with command preview
   const items: vscode.QuickPickItem[] = [
@@ -146,6 +147,10 @@ async function showAIPreview(
     {
       label: '$(edit) Edit',
       description: 'Modify the command before saving',
+    },
+    {
+      label: '$(sync) Regenerate',
+      description: 'Generate a different command',
     },
     {
       label: '$(close) Cancel',
@@ -166,6 +171,11 @@ async function showAIPreview(
 
   if (!selection || selection.label === '$(close) Cancel') {
     return undefined;
+  }
+
+  // Handle regenerate
+  if (selection.label === '$(sync) Regenerate') {
+    return handleAICreate(prompt, storage, aiProvider);
   }
 
   let command = response.command;

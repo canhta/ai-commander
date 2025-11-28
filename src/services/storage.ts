@@ -177,6 +177,22 @@ export class StorageService {
   }
 
   /**
+   * Get commands grouped by source
+   */
+  getGroupedBySource(): Map<string, CLICommand[]> {
+    const groups = new Map<string, CLICommand[]>();
+
+    for (const cmd of this.commands.values()) {
+      const source = cmd.source || 'manual';
+      const group = groups.get(source) || [];
+      group.push(cmd);
+      groups.set(source, group);
+    }
+
+    return groups;
+  }
+
+  /**
    * Search commands by prompt or command text
    */
   search(query: string): CLICommand[] {

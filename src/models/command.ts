@@ -39,6 +39,9 @@ export interface CLICommand {
   usageCount: number;
   lastUsedAt?: string;
 
+  // Security
+  skipDestructiveWarning?: boolean;  // Don't warn for this command
+
   // Sync
   syncId?: string;
 }

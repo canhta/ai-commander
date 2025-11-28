@@ -85,6 +85,9 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('cmdify.refresh', () =>
       treeProvider.refresh()
     ),
+    vscode.commands.registerCommand('cmdify.sponsor', () =>
+      vscode.env.openExternal(vscode.Uri.parse('https://buymeacoffee.com/cmdify'))
+    ),
   ];
 
   // Listen for configuration changes

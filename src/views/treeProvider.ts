@@ -2,13 +2,14 @@ import * as vscode from 'vscode';
 import { CLICommand, getDisplayName, getTooltip } from '../models/command';
 import { StorageService } from '../services/storage';
 
-type TreeItemType = 'recent' | 'tag' | 'command';
+type TreeItemType = 'recent' | 'tag' | 'source' | 'command';
 
 interface CommandTreeItem extends vscode.TreeItem {
   command?: vscode.Command;
   commandData?: CLICommand;
   itemType: TreeItemType;
   tagName?: string;
+  sourceName?: string;
 }
 
 /**
@@ -44,6 +45,10 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
       return Promise.resolve(this.getCommandsByTag(element.tagName));
     }
 
+    if (element.itemType === 'source' && element.sourceName) {
+      return Promise.resolve(this.getCommandsBySource(element.sourceName));
+    }
+
     return Promise.resolve([]);
   }
 
@@ -62,7 +67,7 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
       }
     }
 
-    // Group by tags or show flat list
+    // Group by tags, source, or show flat list
     if (groupBy === 'tags') {
       const grouped = this.storage.getGroupedByTag();
       const sortedTags = Array.from(grouped.keys()).sort();
@@ -71,8 +76,37 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
         const count = grouped.get(tag)?.length || 0;
         items.push(this.createCategoryItem(tag, 'tag', count, 'tag', tag));
       }
+    } else if (groupBy === 'source') {
+      const grouped = this.storage.getGroupedBySource();
+      const sourceOrder = ['ai', 'manual', 'imported', 'shared'];
+      const sourceLabels: Record<string, string> = {
+        'ai': 'AI Generated',
+        'manual': 'Manual',
+        'imported': 'Imported',
+        'shared': 'Shared',
+      };
+      const sourceIcons: Record<string, string> = {
+        'ai': 'sparkle',
+        'manual': 'edit',
+        'imported': 'cloud-download',
+        'shared': 'cloud',
+      };
+
+      for (const source of sourceOrder) {
+        const commands = grouped.get(source);
+        if (commands && commands.length > 0) {
+          items.push(this.createCategoryItem(
+            sourceLabels[source] || source,
+            'source' as TreeItemType,
+            commands.length,
+            sourceIcons[source] || 'terminal',
+            undefined,
+            source
+          ));
+        }
+      }
     } else {
-      // Flat list
+      // Flat list (none)
       const commands = this.storage.getAll();
       for (const cmd of commands) {
         items.push(this.createCommandItem(cmd));
@@ -109,12 +143,19 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
     return commands.map((cmd) => this.createCommandItem(cmd));
   }
 
+  private getCommandsBySource(source: string): CommandTreeItem[] {
+    const grouped = this.storage.getGroupedBySource();
+    const commands = grouped.get(source) || [];
+    return commands.map((cmd) => this.createCommandItem(cmd));
+  }
+
   private createCategoryItem(
     label: string,
     itemType: TreeItemType,
     count: number,
     icon: string,
-    tagName?: string
+    tagName?: string,
+    sourceName?: string
   ): CommandTreeItem {
     const displayLabel = tagName === 'untagged' ? 'Untagged' : label;
     return {
@@ -122,6 +163,7 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
       description: `${count}`,
       itemType,
       tagName,
+      sourceName,
       collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
       iconPath: new vscode.ThemeIcon(icon),
       contextValue: 'category',

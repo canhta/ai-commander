@@ -75,7 +75,7 @@ async function runCommand(cmd: CLICommand, storage: StorageService): Promise<voi
   const config = vscode.workspace.getConfiguration('cmdify.execution');
   const confirmDestructive = config.get<boolean>('confirmDestructive', true);
 
-  if (confirmDestructive) {
+  if (confirmDestructive && !cmd.skipDestructiveWarning) {
     const analysis = analyzeCommand(commandToRun);
 
     if (analysis.blocked) {
@@ -88,14 +88,24 @@ async function runCommand(cmd: CLICommand, storage: StorageService): Promise<voi
 
     if (analysis.warnings.length > 0) {
       const warningMessage = getWarningMessage(analysis);
+      
       const result = await vscode.window.showWarningMessage(
         `⚠️ Heads up - this looks destructive\n\n${commandToRun}\n\n${warningMessage}`,
         { modal: true },
         'Run Anyway',
+        "Don't Warn for This Command",
         'Cancel'
       );
 
-      if (result !== 'Run Anyway') {
+      if (result === "Don't Warn for This Command") {
+        // Update command to skip future warnings
+        const updatedCmd: CLICommand = {
+          ...cmd,
+          skipDestructiveWarning: true,
+        };
+        await storage.update(updatedCmd);
+        // Continue to run the command
+      } else if (result !== 'Run Anyway') {
         return;
       }
     }
