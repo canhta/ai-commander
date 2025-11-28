@@ -55,11 +55,13 @@
         {
           "id": "cmdify.focus",
           "name": "Focus",
-          "type": "webview"
+          "type": "webview",
+          "icon": "$(flame)"
         },
         {
           "id": "cmdify.commands",
-          "name": "Commands"
+          "name": "Commands",
+          "icon": "$(terminal)"
         }
       ]
     },
@@ -457,11 +459,11 @@
               "flame"
             ],
             "enumDescriptions": [
-              "🐱 Cat - Cute and cuddly",
-              "🐶 Dog - Loyal friend",
-              "🤖 Robot - Tech buddy",
-              "🌱 Plant - Growing companion",
-              "🔥 Flame - Fiery spirit"
+              "Cat - Cute and cuddly",
+              "Dog - Loyal friend",
+              "Robot - Tech buddy",
+              "Plant - Growing companion",
+              "Flame - Fiery spirit"
             ],
             "default": "robot",
             "description": "Focus companion character",

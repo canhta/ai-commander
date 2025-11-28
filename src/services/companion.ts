@@ -8,7 +8,7 @@ import {
   CompanionState,
   CompanionType,
   DEFAULT_COMPANION_STATE,
-  COMPANION_EMOJIS,
+  COMPANION_ICONS,
 } from '../models/companion';
 import { FocusService } from './focus';
 
@@ -117,13 +117,13 @@ export class CompanionService implements vscode.Disposable {
   }
 
   /**
-   * Get companion emoji for status bar
+   * Get companion icon for status bar (codicon format)
    */
-  getCompanionEmoji(status?: string): string {
+  getCompanionIcon(status?: string): string {
     const focusState = this.focusService.getState();
     const currentStatus = status || focusState.status;
-    const emojis = COMPANION_EMOJIS[this.state.type];
-    return emojis[currentStatus] || emojis.idle;
+    const icons = COMPANION_ICONS[this.state.type];
+    return icons[currentStatus] || icons.idle;
   }
 
   /**

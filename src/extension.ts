@@ -21,7 +21,7 @@ import { FocusService } from './services/focus';
 import { CompanionService } from './services/companion';
 import { CompanionPanelProvider } from './views/companionPanel';
 import { formatTime } from './utils/dateUtils';
-import { COMPANION_EMOJIS } from './models/companion';
+import { COMPANION_ICONS } from './models/companion';
 
 let storage: StorageService;
 let treeProvider: CommandsTreeProvider;
@@ -228,17 +228,17 @@ function updateFocusStatusBar(): void {
   const companionState = companionService.getState();
   const stats = focusService.getStats();
 
-  const emojis = COMPANION_EMOJIS[companionState.type];
-  const emoji = emojis[focusState.status] || emojis.idle;
+  const icons = COMPANION_ICONS[companionState.type];
+  const icon = icons[focusState.status] || icons.idle;
   
-  let text = emoji;
+  let text = icon;
   
   if (focusState.status === 'focusing' || focusState.status === 'break' || focusState.status === 'paused') {
     text += ` ${formatTime(focusState.timeRemaining)}`;
   }
   
   if (stats.currentStreak > 0) {
-    text += ` 🔥${stats.currentStreak}`;
+    text += ` $(flame)${stats.currentStreak}`;
   }
 
   focusStatusBarItem.text = text;

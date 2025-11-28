@@ -26,43 +26,44 @@ export interface CompanionState {
 }
 
 /**
- * Companion emojis for status bar
+ * Companion codicons for status bar (VS Code built-in icons)
+ * Using codicon syntax: $(icon-name)
  */
-export const COMPANION_EMOJIS: Record<CompanionType, Record<string, string>> = {
+export const COMPANION_ICONS: Record<CompanionType, Record<string, string>> = {
   cat: {
-    idle: '🐱',
-    focusing: '😺',
-    break: '😸',
-    paused: '😿',
-    celebrating: '😻',
+    idle: '$(smiley)',
+    focusing: '$(flame)',
+    break: '$(coffee)',
+    paused: '$(debug-pause)',
+    celebrating: '$(star-full)',
   },
   dog: {
-    idle: '🐶',
-    focusing: '🐕',
-    break: '🦮',
-    paused: '🐕‍🦺',
-    celebrating: '🐩',
+    idle: '$(smiley)',
+    focusing: '$(flame)',
+    break: '$(coffee)',
+    paused: '$(debug-pause)',
+    celebrating: '$(star-full)',
   },
   robot: {
-    idle: '🤖',
-    focusing: '🤖',
-    break: '🔋',
-    paused: '⏸️',
-    celebrating: '🎉',
+    idle: '$(hubot)',
+    focusing: '$(flame)',
+    break: '$(coffee)',
+    paused: '$(debug-pause)',
+    celebrating: '$(star-full)',
   },
   plant: {
-    idle: '🌱',
-    focusing: '🌿',
-    break: '🌻',
-    paused: '🥀',
-    celebrating: '🌸',
+    idle: '$(smiley)',
+    focusing: '$(flame)',
+    break: '$(coffee)',
+    paused: '$(debug-pause)',
+    celebrating: '$(star-full)',
   },
   flame: {
-    idle: '🔥',
-    focusing: '🔥',
-    break: '✨',
-    paused: '💫',
-    celebrating: '🎆',
+    idle: '$(flame)',
+    focusing: '$(flame)',
+    break: '$(coffee)',
+    paused: '$(debug-pause)',
+    celebrating: '$(star-full)',
   },
 };
 

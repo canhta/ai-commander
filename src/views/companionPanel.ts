@@ -204,21 +204,29 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
       border: none;
       background: var(--vscode-button-secondaryBackground);
       color: var(--vscode-button-secondaryForeground);
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
       cursor: pointer;
-      font-size: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 0;
     }
     .btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+    .btn svg { 
+      width: 14px; 
+      height: 14px; 
+      fill: currentColor;
+    }
     .btn.primary {
       background: var(--vscode-button-background);
       color: var(--vscode-button-foreground);
       width: auto;
-      padding: 0 14px;
+      padding: 0 12px;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
     }
     .btn.primary:hover { background: var(--vscode-button-hoverBackground); }
     
@@ -325,14 +333,20 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
     }
     
     function getButtons(s) {
-      if (s === 'idle') return '<button class="btn primary" data-action="start">▶ Start</button>';
+      const icons = {
+        play: '<svg viewBox="0 0 16 16"><path d="M4 2l10 6-10 6V2z"/></svg>',
+        pause: '<svg viewBox="0 0 16 16"><path d="M4 2h3v12H4V2zm5 0h3v12H9V2z"/></svg>',
+        skip: '<svg viewBox="0 0 16 16"><path d="M2 2l8 6-8 6V2zm9 0h3v12h-3V2z"/></svg>',
+        stop: '<svg viewBox="0 0 16 16"><path d="M3 3h10v10H3z"/></svg>'
+      };
+      if (s === 'idle') return '<button class="btn primary" data-action="start">' + icons.play + ' Start</button>';
       if (s === 'focusing' || s === 'break') return \`
-        <button class="btn" data-action="pause" title="Pause">⏸</button>
-        <button class="btn" data-action="skip" title="Skip">⏭</button>
-        <button class="btn" data-action="stop" title="Stop">⏹</button>\`;
+        <button class="btn" data-action="pause" title="Pause">\${icons.pause}</button>
+        <button class="btn" data-action="skip" title="Skip">\${icons.skip}</button>
+        <button class="btn" data-action="stop" title="Stop">\${icons.stop}</button>\`;
       if (s === 'paused') return \`
-        <button class="btn primary" data-action="resume">▶</button>
-        <button class="btn" data-action="stop" title="Stop">⏹</button>\`;
+        <button class="btn primary" data-action="resume">\${icons.play} Resume</button>
+        <button class="btn" data-action="stop" title="Stop">\${icons.stop}</button>\`;
       return '';
     }
     
@@ -360,17 +374,23 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
   }
 
   private getControlButtons(status: string): string {
+    const icons = {
+      play: '<svg viewBox="0 0 16 16"><path d="M4 2l10 6-10 6V2z"/></svg>',
+      pause: '<svg viewBox="0 0 16 16"><path d="M4 2h3v12H4V2zm5 0h3v12H9V2z"/></svg>',
+      skip: '<svg viewBox="0 0 16 16"><path d="M2 2l8 6-8 6V2zm9 0h3v12h-3V2z"/></svg>',
+      stop: '<svg viewBox="0 0 16 16"><path d="M3 3h10v10H3z"/></svg>',
+    };
     if (status === "idle") {
-      return '<button class="btn primary" data-action="start">▶ Start</button>';
+      return `<button class="btn primary" data-action="start">${icons.play} Start</button>`;
     }
     if (status === "focusing" || status === "break") {
-      return `<button class="btn" data-action="pause" title="Pause">⏸</button>
-              <button class="btn" data-action="skip" title="Skip">⏭</button>
-              <button class="btn" data-action="stop" title="Stop">⏹</button>`;
+      return `<button class="btn" data-action="pause" title="Pause">${icons.pause}</button>
+              <button class="btn" data-action="skip" title="Skip">${icons.skip}</button>
+              <button class="btn" data-action="stop" title="Stop">${icons.stop}</button>`;
     }
     if (status === "paused") {
-      return `<button class="btn primary" data-action="resume">▶</button>
-              <button class="btn" data-action="stop" title="Stop">⏹</button>`;
+      return `<button class="btn primary" data-action="resume">${icons.play} Resume</button>
+              <button class="btn" data-action="stop" title="Stop">${icons.stop}</button>`;
     }
     return "";
   }
