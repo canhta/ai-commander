@@ -3,6 +3,7 @@
   "displayName": "Cmdify",
   "description": "AI-powered CLI command manager",
   "version": "0.0.1",
+  "publisher": "canhta",
   "engines": {
     "vscode": "^1.106.1"
   },
@@ -32,7 +33,7 @@
     "viewsWelcome": [
       {
         "view": "cmdify.commands",
-        "contents": "No commands yet.\n[Create Command](command:cmdify.create)\n\nDescribe what you want to do and let AI generate the command for you.\n\n[☕ Buy Me a Coffee](command:cmdify.sponsor)",
+        "contents": "No commands yet.\n[Create Command](command:cmdify.create)\n\nDescribe what you want to do and let AI generate the command for you.\n\n[❤️ Support on Ko-fi](command:cmdify.sponsor)",
         "when": "cmdify.noCommands"
       }
     ],
@@ -80,6 +81,18 @@
         "category": "Cmdify"
       },
       {
+        "command": "cmdify.export",
+        "title": "Export Commands",
+        "icon": "$(export)",
+        "category": "Cmdify"
+      },
+      {
+        "command": "cmdify.import",
+        "title": "Import Commands",
+        "icon": "$(import)",
+        "category": "Cmdify"
+      },
+      {
         "command": "cmdify.login",
         "title": "GitHub Login",
         "category": "Cmdify"
@@ -113,7 +126,7 @@
       },
       {
         "command": "cmdify.sponsor",
-        "title": "Buy Me a Coffee ☕",
+        "title": "Support on Ko-fi ❤️",
         "icon": "$(heart)",
         "category": "Cmdify"
       }
@@ -324,6 +337,6 @@
     "@vscode/test-electron": "^2.5.2"
   },
   "sponsor": {
-    "url": "https://buymeacoffee.com/cmdify"
+    "url": "https://ko-fi.com/canhta"
   }
 }

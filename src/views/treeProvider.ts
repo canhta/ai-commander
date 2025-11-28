@@ -1,16 +1,7 @@
 import * as vscode from 'vscode';
-import { CLICommand, getDisplayName, getTooltip } from '../models/command';
+import { CLICommand, getDisplayName } from '../models/command';
+import { CommandTreeItem, TreeItemType } from '../models/types';
 import { StorageService } from '../services/storage';
-
-type TreeItemType = 'recent' | 'tag' | 'source' | 'command';
-
-interface CommandTreeItem extends vscode.TreeItem {
-  command?: vscode.Command;
-  commandData?: CLICommand;
-  itemType: TreeItemType;
-  tagName?: string;
-  sourceName?: string;
-}
 
 /**
  * Tree data provider for the commands sidebar

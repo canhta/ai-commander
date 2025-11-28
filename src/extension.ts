@@ -12,6 +12,8 @@ import {
   handleDelete,
   handleSync,
   handleLogin,
+  handleExport,
+  handleImport,
   GitHubSyncService,
 } from './commands';
 import { disposeTerminal } from './utils/shell';
@@ -86,6 +88,12 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('cmdify.sync', () =>
       handleSync(syncService)
     ),
+    vscode.commands.registerCommand('cmdify.export', () =>
+      handleExport(storage)
+    ),
+    vscode.commands.registerCommand('cmdify.import', () =>
+      handleImport(storage)
+    ),
     vscode.commands.registerCommand('cmdify.login', () =>
       handleLogin(syncService)
     ),
@@ -102,7 +110,7 @@ export async function activate(context: vscode.ExtensionContext) {
       treeProvider.refresh()
     ),
     vscode.commands.registerCommand('cmdify.sponsor', () =>
-      vscode.env.openExternal(vscode.Uri.parse('https://buymeacoffee.com/cmdify'))
+      vscode.env.openExternal(vscode.Uri.parse('https://ko-fi.com/canhta'))
     ),
   ];
 
@@ -182,7 +190,7 @@ async function configureAIProvider(context: vscode.ExtensionContext): Promise<vo
   }
 
   // Step 2: Select model (dropdown)
-  const models = getModelsForProvider(selectedProvider.value);
+  const models = await getModelsForProvider(selectedProvider.value, context);
   if (models.length === 0) {
     vscode.window.showErrorMessage('No models available for this provider.');
     return;
@@ -344,7 +352,7 @@ interface ModelItem extends vscode.QuickPickItem {
   value: string;
 }
 
-function getModelsForProvider(provider: string): ModelItem[] {
+async function getModelsForProvider(provider: string, context: vscode.ExtensionContext): Promise<ModelItem[]> {
   switch (provider) {
     case 'openai':
       return [
@@ -359,14 +367,16 @@ function getModelsForProvider(provider: string): ModelItem[] {
         { label: 'Claude Haiku 3.5', value: 'claude-3-5-haiku-20241022', description: 'Fast and affordable' },
         { label: 'Claude Opus 4', value: 'claude-opus-4-20250514', description: 'Most capable' },
       ];
-    case 'ollama':
-      return [
-        { label: 'Llama 3.2', value: 'llama3.2', description: 'Recommended - Good all-around' },
-        { label: 'Llama 3.1 8B', value: 'llama3.1:8b', description: 'Larger context window' },
-        { label: 'Mistral', value: 'mistral', description: 'Fast and efficient' },
-        { label: 'CodeLlama', value: 'codellama', description: 'Optimized for code' },
-        { label: 'Qwen 2.5 Coder', value: 'qwen2.5-coder', description: 'Good for coding tasks' },
-      ];
+    case 'ollama': {
+      // Try to fetch dynamic models from Ollama
+      const ollamaProvider = new OllamaProvider();
+      const models = await ollamaProvider.getAvailableModels();
+      return models.map(model => ({
+        label: model,
+        value: model,
+        description: model.includes('code') ? 'Optimized for code' : undefined,
+      }));
+    }
     case 'azure':
       return [
         { label: 'GPT-4o', value: 'gpt-4o', description: 'Azure-hosted GPT-4o' },

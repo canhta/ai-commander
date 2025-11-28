@@ -70,17 +70,70 @@ export function executeCommand(command: string, options?: {
   reuseTerminal?: boolean;
 }): void {
   const config = vscode.workspace.getConfiguration('cmdify.execution');
+  const mode = config.get<string>('mode', 'terminal');
   const reuseTerminal = options?.reuseTerminal ?? config.get<boolean>('reuseTerminal', true);
 
+  if (mode === 'background') {
+    executeInBackground(command, options?.workingDirectory);
+  } else {
+    executeInTerminal(command, reuseTerminal, options?.workingDirectory);
+  }
+}
+
+/**
+ * Execute command in an integrated terminal
+ */
+function executeInTerminal(
+  command: string, 
+  reuseTerminal: boolean, 
+  workingDirectory?: string
+): void {
   const terminal = getTerminal(reuseTerminal);
 
   // Change to working directory if specified
-  if (options?.workingDirectory) {
-    terminal.sendText(`cd "${options.workingDirectory}"`);
+  if (workingDirectory) {
+    terminal.sendText(`cd "${workingDirectory}"`);
   }
 
   terminal.sendText(command);
   terminal.show();
+}
+
+/**
+ * Execute command in background using child process
+ */
+async function executeInBackground(
+  command: string, 
+  workingDirectory?: string
+): Promise<void> {
+  const { exec } = await import('child_process');
+  
+  const cwd = workingDirectory || getWorkspaceFolder();
+  
+  const outputChannel = vscode.window.createOutputChannel('Cmdify Background');
+  outputChannel.show(true);
+  outputChannel.appendLine(`$ ${command}`);
+  outputChannel.appendLine('');
+
+  exec(command, { cwd }, (error, stdout, stderr) => {
+    if (error) {
+      outputChannel.appendLine(`Error: ${error.message}`);
+      vscode.window.showErrorMessage(`Command failed: ${error.message}`);
+      return;
+    }
+    
+    if (stdout) {
+      outputChannel.appendLine(stdout);
+    }
+    
+    if (stderr) {
+      outputChannel.appendLine(`stderr: ${stderr}`);
+    }
+    
+    outputChannel.appendLine('');
+    outputChannel.appendLine('--- Command completed ---');
+    vscode.window.showInformationMessage('Background command completed');
+  });
 }
 
 /**

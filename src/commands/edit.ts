@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
 import { CLICommand } from '../models/command';
+import { CommandTreeItem } from '../models/types';
 import { StorageService } from '../services/storage';
 import { extractVariables } from '../utils/variables';
-
-interface CommandTreeItem {
-  commandData?: CLICommand;
-}
+import { selectCommand } from '../utils/quickPick';
 
 /**
  * Handle editing a command
@@ -14,34 +12,14 @@ export async function handleEdit(
   item: CommandTreeItem | undefined,
   storage: StorageService
 ): Promise<void> {
-  if (!item?.commandData) {
-    const commands = storage.getAll();
-    if (commands.length === 0) {
-      vscode.window.showInformationMessage('No commands to edit.');
-      return;
-    }
+  const cmd = await selectCommand(item, storage, {
+    placeHolder: 'Select a command to edit',
+    emptyMessage: 'No commands to edit.',
+  });
 
-    const items = commands.map((cmd) => ({
-      label: cmd.prompt || cmd.command,
-      description: cmd.tags.join(', '),
-      detail: cmd.command,
-      command: cmd,
-    }));
-
-    const selection = await vscode.window.showQuickPick(items, {
-      placeHolder: 'Select a command to edit',
-      matchOnDetail: true,
-    });
-
-    if (!selection) {
-      return;
-    }
-
-    await editCommand(selection.command, storage);
-    return;
+  if (cmd) {
+    await editCommand(cmd, storage);
   }
-
-  await editCommand(item.commandData, storage);
 }
 
 /**
@@ -157,34 +135,14 @@ export async function handleDelete(
   item: CommandTreeItem | undefined,
   storage: StorageService
 ): Promise<void> {
-  if (!item?.commandData) {
-    const commands = storage.getAll();
-    if (commands.length === 0) {
-      vscode.window.showInformationMessage('No commands to delete.');
-      return;
-    }
+  const cmd = await selectCommand(item, storage, {
+    placeHolder: 'Select a command to delete',
+    emptyMessage: 'No commands to delete.',
+  });
 
-    const items = commands.map((cmd) => ({
-      label: cmd.prompt || cmd.command,
-      description: cmd.tags.join(', '),
-      detail: cmd.command,
-      command: cmd,
-    }));
-
-    const selection = await vscode.window.showQuickPick(items, {
-      placeHolder: 'Select a command to delete',
-      matchOnDetail: true,
-    });
-
-    if (!selection) {
-      return;
-    }
-
-    await deleteCommand(selection.command, storage);
-    return;
+  if (cmd) {
+    await deleteCommand(cmd, storage);
   }
-
-  await deleteCommand(item.commandData, storage);
 }
 
 /**

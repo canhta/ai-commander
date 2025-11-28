@@ -71,7 +71,7 @@ export async function promptForVariables(
 }
 
 /**
- * Show variable input with live preview
+ * Show variable input with live preview using QuickPick
  */
 export async function promptForVariablesWithPreview(
   variables: CommandVariable[],
@@ -81,12 +81,59 @@ export async function promptForVariablesWithPreview(
     return command;
   }
 
-  const values = await promptForVariables(variables, command);
-  if (!values) {
+  const values = new Map<string, string>();
+  
+  // Initialize with default values
+  for (const variable of variables) {
+    values.set(variable.name, variable.defaultValue || '');
+  }
+
+  for (let i = 0; i < variables.length; i++) {
+    const variable = variables[i];
+    const currentPreview = replaceVariables(command, values);
+    
+    const value = await vscode.window.showInputBox({
+      prompt: variable.description || `Enter value for "${variable.name}"`,
+      placeHolder: variable.defaultValue || variable.name,
+      value: variable.defaultValue,
+      title: `Variable ${i + 1}/${variables.length}: ${variable.name}`,
+      valueSelection: variable.defaultValue ? [0, variable.defaultValue.length] : undefined,
+      validateInput: () => {
+        // Show preview in validation (using null to not show error)
+        return null;
+      },
+    });
+
+    if (value === undefined) {
+      // User cancelled
+      return undefined;
+    }
+
+    values.set(variable.name, value || variable.defaultValue || '');
+  }
+
+  const finalCommand = replaceVariables(command, values);
+  
+  // Show final preview confirmation
+  const confirm = await vscode.window.showQuickPick([
+    {
+      label: '$(play) Run',
+      description: 'Execute this command',
+    },
+    {
+      label: '$(close) Cancel',
+      description: 'Cancel execution',
+    },
+  ], {
+    title: 'Command Preview',
+    placeHolder: finalCommand,
+  });
+
+  if (!confirm || confirm.label === '$(close) Cancel') {
     return undefined;
   }
 
-  return replaceVariables(command, values);
+  return finalCommand;
 }
 
 /**

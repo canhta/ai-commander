@@ -20,6 +20,10 @@ export interface AIProvider {
   generate(prompt: string, context: AIContext): Promise<AIResponse>;
 }
 
+// Cached system info (doesn't change during session)
+let cachedOS: string | undefined;
+let cachedShell: string | undefined;
+
 /**
  * Get the system prompt for AI command generation
  */
@@ -76,32 +80,57 @@ export function parseAIResponse(response: string): AIResponse {
 }
 
 /**
- * Get the current OS name
+ * Get the current OS name (cached)
  */
 export function getOS(): string {
+  if (cachedOS) {
+    return cachedOS;
+  }
+
   switch (process.platform) {
     case 'darwin':
-      return 'macOS';
+      cachedOS = 'macOS';
+      break;
     case 'win32':
-      return 'Windows';
+      cachedOS = 'Windows';
+      break;
     case 'linux':
-      return 'Linux';
+      cachedOS = 'Linux';
+      break;
     default:
-      return process.platform;
+      cachedOS = process.platform;
   }
+
+  return cachedOS;
 }
 
 /**
- * Get the current shell
+ * Get the current shell (cached with config listener)
  */
 export function getShell(): string {
+  // Check if we need to refresh cache
+  if (cachedShell) {
+    return cachedShell;
+  }
+
   const config = vscode.workspace.getConfiguration('terminal.integrated');
   const defaultProfile = config.get<string>('defaultProfile.' + getOSKey());
+  
   if (defaultProfile) {
-    return defaultProfile.toLowerCase();
+    cachedShell = defaultProfile.toLowerCase();
+  } else {
+    // Fallback
+    cachedShell = process.platform === 'win32' ? 'powershell' : 'zsh';
   }
-  // Fallback
-  return process.platform === 'win32' ? 'powershell' : 'zsh';
+
+  return cachedShell;
+}
+
+/**
+ * Clear cached values (call when config changes)
+ */
+export function clearCache(): void {
+  cachedShell = undefined;
 }
 
 function getOSKey(): string {

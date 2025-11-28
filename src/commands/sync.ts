@@ -275,3 +275,103 @@ export async function handleLogin(syncService: GitHubSyncService): Promise<void>
     vscode.window.showInformationMessage(`Logged in as ${session.account.label}`);
   }
 }
+
+/**
+ * Handle export commands to file
+ */
+export async function handleExport(storage: StorageService): Promise<void> {
+  const commands = storage.exportCommands();
+  
+  if (commands.length === 0) {
+    vscode.window.showInformationMessage('No commands to export.');
+    return;
+  }
+
+  const payload: SyncPayload = {
+    version: '1.0',
+    commands,
+    exportedAt: new Date().toISOString(),
+  };
+
+  const uri = await vscode.window.showSaveDialog({
+    defaultUri: vscode.Uri.file('cmdify-commands.json'),
+    filters: {
+      'JSON Files': ['json'],
+      'All Files': ['*'],
+    },
+    saveLabel: 'Export Commands',
+    title: 'Export Cmdify Commands',
+  });
+
+  if (!uri) {
+    return;
+  }
+
+  try {
+    const content = JSON.stringify(payload, null, 2);
+    await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf-8'));
+    vscode.window.showInformationMessage(`Exported ${commands.length} commands to ${uri.fsPath}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    vscode.window.showErrorMessage(`Failed to export: ${message}`);
+  }
+}
+
+/**
+ * Handle import commands from file
+ */
+export async function handleImport(storage: StorageService): Promise<void> {
+  const uris = await vscode.window.showOpenDialog({
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: {
+      'JSON Files': ['json'],
+      'All Files': ['*'],
+    },
+    openLabel: 'Import Commands',
+    title: 'Import Cmdify Commands',
+  });
+
+  if (!uris || uris.length === 0) {
+    return;
+  }
+
+  try {
+    const content = await vscode.workspace.fs.readFile(uris[0]);
+    const payload = JSON.parse(content.toString()) as SyncPayload;
+
+    if (!payload.commands || !Array.isArray(payload.commands)) {
+      throw new Error('Invalid command file format');
+    }
+
+    // Ask user how to handle import
+    const mergeOption = await vscode.window.showQuickPick([
+      {
+        label: '$(git-merge) Merge',
+        description: 'Merge with existing commands (keeps both)',
+        value: true,
+      },
+      {
+        label: '$(replace-all) Replace',
+        description: 'Replace all existing commands',
+        value: false,
+      },
+    ], {
+      placeHolder: 'How would you like to import?',
+      title: 'Import Commands',
+    });
+
+    if (!mergeOption) {
+      return;
+    }
+
+    await storage.importCommands(payload.commands, mergeOption.value);
+    vscode.window.showInformationMessage(
+      `Imported ${payload.commands.length} commands ${mergeOption.value ? '(merged)' : '(replaced)'}`
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    vscode.window.showErrorMessage(`Failed to import: ${message}`);
+  }
+}

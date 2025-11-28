@@ -134,6 +134,26 @@ async function showAIPreview(
   storage: StorageService,
   aiProvider: AIProvider
 ): Promise<CLICommand | undefined> {
+  // Build a detailed preview message
+  const previewLines: string[] = [
+    '```',
+    response.command,
+    '```',
+  ];
+
+  if (response.explanation) {
+    previewLines.push('', `💡 ${response.explanation}`);
+  }
+
+  if (response.suggestedTags?.length) {
+    previewLines.push('', `🏷️ Tags: ${response.suggestedTags.join(', ')}`);
+  }
+
+  if (response.variables?.length) {
+    const varNames = response.variables.map(v => `{{${v.name}}}`).join(', ');
+    previewLines.push('', `📝 Variables: ${varNames}`);
+  }
+
   // Create quick pick with command preview
   const items: vscode.QuickPickItem[] = [
     {
@@ -158,16 +178,21 @@ async function showAIPreview(
     },
   ];
 
-  const previewText = [
-    `Command: ${response.command}`,
-    response.explanation ? `\nExplanation: ${response.explanation}` : '',
-    response.suggestedTags?.length ? `\nTags: ${response.suggestedTags.join(', ')}` : '',
-  ].filter(Boolean).join('');
+  // Show the command in a markdown preview
+  const previewMarkdown = new vscode.MarkdownString(previewLines.join('\n'));
+  previewMarkdown.isTrusted = true;
 
   const selection = await vscode.window.showQuickPick(items, {
     title: '✨ AI Generated Command',
-    placeHolder: previewText,
+    placeHolder: response.command,
+    matchOnDescription: true,
   });
+
+  // Also show the explanation in an information message for better visibility
+  if (response.explanation && selection && selection.label !== '$(close) Cancel') {
+    // Show as a non-blocking notification
+    vscode.window.setStatusBarMessage(`💡 ${response.explanation}`, 5000);
+  }
 
   if (!selection || selection.label === '$(close) Cancel') {
     return undefined;

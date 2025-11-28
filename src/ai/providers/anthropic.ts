@@ -1,5 +1,13 @@
 import * as vscode from 'vscode';
 import { AIProvider, AIContext, AIResponse, getSystemPrompt, parseAIResponse } from '../../services/ai';
+import { getAIConfig, getApiKey, makeAPIRequest } from './base';
+
+/**
+ * Anthropic response format
+ */
+interface AnthropicResponse {
+  content: Array<{ type: string; text: string }>;
+}
 
 /**
  * Anthropic (Claude) provider for command generation
@@ -13,38 +21,28 @@ export class AnthropicProvider implements AIProvider {
   constructor(private secretStorage: vscode.SecretStorage) {}
 
   async generate(prompt: string, context: AIContext): Promise<AIResponse> {
-    const apiKey = await this.secretStorage.get('cmdify.anthropic');
-    if (!apiKey) {
-      throw new Error('Anthropic API key not configured. Use "Cmdify: Configure AI Provider" to set it up.');
-    }
+    const apiKey = await getApiKey(this.secretStorage, 'anthropic');
+    const config = getAIConfig('claude-sonnet-4-20250514');
 
-    const config = vscode.workspace.getConfiguration('cmdify.ai');
-    const model = config.get<string>('model') || 'claude-sonnet-4-20250514';
-    const customEndpoint = config.get<string>('customEndpoint');
-
-    const response = await fetch(customEndpoint || this.endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+    const data = await makeAPIRequest<AnthropicResponse>(
+      config.customEndpoint || this.endpoint,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: config.model,
+          system: getSystemPrompt(context),
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 500,
+        }),
       },
-      body: JSON.stringify({
-        model,
-        system: getSystemPrompt(context),
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 500,
-      }),
-    });
+      'Anthropic'
+    );
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Anthropic API error: ${response.status} - ${error}`);
-    }
-
-    const data = await response.json() as {
-      content: Array<{ type: string; text: string }>;
-    };
     const content = data.content?.[0]?.text;
 
     if (!content) {

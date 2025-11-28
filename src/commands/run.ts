@@ -1,13 +1,11 @@
 import * as vscode from 'vscode';
 import { CLICommand } from '../models/command';
+import { CommandTreeItem } from '../models/types';
 import { StorageService } from '../services/storage';
 import { analyzeCommand, getWarningMessage } from '../services/security';
 import { executeCommand, getWorkspaceFolder, promptWorkingDirectory } from '../utils/shell';
 import { hasVariables, extractVariables, promptForVariablesWithPreview } from '../utils/variables';
-
-interface CommandTreeItem {
-  commandData?: CLICommand;
-}
+import { selectCommand, createCommandQuickPickItems } from '../utils/quickPick';
 
 /**
  * Handle running a command
@@ -16,41 +14,15 @@ export async function handleRun(
   item: CommandTreeItem | undefined,
   storage: StorageService
 ): Promise<void> {
-  if (!item?.commandData) {
-    // Show quick pick to select a command
-    const commands = storage.getAll();
-    if (commands.length === 0) {
-      const create = await vscode.window.showInformationMessage(
-        'No commands saved yet. Create your first command?',
-        'Create'
-      );
-      if (create === 'Create') {
-        await vscode.commands.executeCommand('cmdify.create');
-      }
-      return;
-    }
+  const cmd = await selectCommand(item, storage, {
+    placeHolder: 'Select a command to run',
+    emptyMessage: 'No commands saved yet.',
+    showCreateOption: true,
+  });
 
-    const items = commands.map((cmd) => ({
-      label: cmd.prompt || cmd.command,
-      description: cmd.tags.join(', '),
-      detail: cmd.command,
-      command: cmd,
-    }));
-
-    const selection = await vscode.window.showQuickPick(items, {
-      placeHolder: 'Select a command to run',
-      matchOnDetail: true,
-    });
-
-    if (!selection) {
-      return;
-    }
-
-    await runCommand(selection.command, storage);
-    return;
+  if (cmd) {
+    await runCommand(cmd, storage);
   }
-
-  await runCommand(item.commandData, storage);
 }
 
 /**
@@ -145,36 +117,15 @@ export async function handleCopy(
   item: CommandTreeItem | undefined,
   storage: StorageService
 ): Promise<void> {
-  if (!item?.commandData) {
-    const commands = storage.getAll();
-    if (commands.length === 0) {
-      vscode.window.showInformationMessage('No commands to copy.');
-      return;
-    }
+  const cmd = await selectCommand(item, storage, {
+    placeHolder: 'Select a command to copy',
+    emptyMessage: 'No commands to copy.',
+  });
 
-    const items = commands.map((cmd) => ({
-      label: cmd.prompt || cmd.command,
-      description: cmd.tags.join(', '),
-      detail: cmd.command,
-      command: cmd,
-    }));
-
-    const selection = await vscode.window.showQuickPick(items, {
-      placeHolder: 'Select a command to copy',
-      matchOnDetail: true,
-    });
-
-    if (!selection) {
-      return;
-    }
-
-    await vscode.env.clipboard.writeText(selection.command.command);
+  if (cmd) {
+    await vscode.env.clipboard.writeText(cmd.command);
     vscode.window.showInformationMessage('Command copied to clipboard!');
-    return;
   }
-
-  await vscode.env.clipboard.writeText(item.commandData.command);
-  vscode.window.showInformationMessage('Command copied to clipboard!');
 }
 
 /**
@@ -182,12 +133,7 @@ export async function handleCopy(
  */
 export async function handleSearch(storage: StorageService): Promise<void> {
   const commands = storage.getAll();
-
-  const items: vscode.QuickPickItem[] = commands.map((cmd) => ({
-    label: cmd.prompt || cmd.command,
-    description: cmd.tags.join(', '),
-    detail: cmd.command,
-  }));
+  const items: vscode.QuickPickItem[] = createCommandQuickPickItems(commands);
 
   // Add AI generation option
   items.push({
