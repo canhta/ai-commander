@@ -158,82 +158,121 @@
         }
       ]
     },
-    "configuration": {
-      "title": "Cmdify",
-      "properties": {
-        "cmdify.ai.provider": {
-          "type": "string",
-          "enum": [
-            "openai",
-            "anthropic",
-            "ollama",
-            "azure",
-            "custom"
-          ],
-          "default": "openai",
-          "description": "AI provider for command generation"
-        },
-        "cmdify.ai.model": {
-          "type": "string",
-          "default": "gpt-4o-mini",
-          "description": "AI model to use for command generation"
-        },
-        "cmdify.ai.customEndpoint": {
-          "type": "string",
-          "default": "",
-          "description": "Custom API endpoint for AI provider"
-        },
-        "cmdify.execution.mode": {
-          "type": "string",
-          "enum": [
-            "terminal",
-            "background"
-          ],
-          "default": "terminal",
-          "description": "How to execute commands"
-        },
-        "cmdify.execution.reuseTerminal": {
-          "type": "boolean",
-          "default": true,
-          "description": "Reuse the same terminal for command execution"
-        },
-        "cmdify.execution.confirmDestructive": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show confirmation before running destructive commands"
-        },
-        "cmdify.view.showRecent": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show recent commands section"
-        },
-        "cmdify.view.recentCount": {
-          "type": "number",
-          "default": 5,
-          "description": "Number of recent commands to show"
-        },
-        "cmdify.view.groupBy": {
-          "type": "string",
-          "enum": [
-            "tags",
-            "source",
-            "none"
-          ],
-          "default": "tags",
-          "description": "How to group commands in the sidebar"
-        },
-        "cmdify.sync.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable GitHub Gist sync"
-        },
-        "cmdify.sync.autoSync": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically sync changes"
+    "configuration": [
+      {
+        "title": "AI",
+        "order": 1,
+        "properties": {
+          "cmdify.ai.provider": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "ollama",
+              "azure",
+              "custom"
+            ],
+            "enumDescriptions": [
+              "OpenAI (GPT-4o, GPT-4o-mini)",
+              "Anthropic (Claude Sonnet, Claude Haiku)",
+              "Ollama - Local models (no API key needed)",
+              "Azure OpenAI Service",
+              "Custom OpenAI-compatible endpoint"
+            ],
+            "default": "openai",
+            "description": "AI provider for command generation. Use 'Cmdify: Configure AI Provider' command for guided setup.",
+            "order": 1
+          },
+          "cmdify.ai.model": {
+            "type": "string",
+            "default": "gpt-4o-mini",
+            "description": "AI model to use. Use 'Cmdify: Configure AI Provider' command to select from available models.",
+            "order": 2
+          },
+          "cmdify.ai.customEndpoint": {
+            "type": "string",
+            "default": "",
+            "description": "Custom API endpoint (required for Azure and Custom providers)",
+            "order": 3
+          }
+        }
+      },
+      {
+        "title": "Execution",
+        "order": 2,
+        "properties": {
+          "cmdify.execution.mode": {
+            "type": "string",
+            "enum": [
+              "terminal",
+              "background"
+            ],
+            "default": "terminal",
+            "description": "How to execute commands",
+            "order": 1
+          },
+          "cmdify.execution.reuseTerminal": {
+            "type": "boolean",
+            "default": true,
+            "description": "Reuse the same terminal for command execution",
+            "order": 2
+          },
+          "cmdify.execution.confirmDestructive": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show confirmation before running destructive commands",
+            "order": 3
+          }
+        }
+      },
+      {
+        "title": "View",
+        "order": 3,
+        "properties": {
+          "cmdify.view.showRecent": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show recent commands section",
+            "order": 1
+          },
+          "cmdify.view.recentCount": {
+            "type": "number",
+            "default": 5,
+            "description": "Number of recent commands to show",
+            "order": 2
+          },
+          "cmdify.view.groupBy": {
+            "type": "string",
+            "enum": [
+              "tags",
+              "source",
+              "none"
+            ],
+            "default": "tags",
+            "description": "How to group commands in the sidebar",
+            "order": 3
+          }
+        }
+      },
+      {
+        "title": "Sync",
+        "order": 4,
+        "properties": {
+          "cmdify.sync.enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable GitHub Gist sync",
+            "order": 1
+          },
+          "cmdify.sync.autoSync": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically sync changes",
+            "order": 2
+          }
         }
       }
-    }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

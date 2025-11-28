@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { StorageService } from './services/storage';
 import { AIProvider } from './services/ai';
-import { OpenAIProvider, AnthropicProvider, OllamaProvider } from './ai/providers';
+import { OpenAIProvider, AnthropicProvider, OllamaProvider, AzureOpenAIProvider, CustomProvider } from './ai/providers';
 import { CommandsTreeProvider } from './views/treeProvider';
 import {
   handleCreate,
@@ -119,6 +119,10 @@ async function initializeAIProvider(
       return new AnthropicProvider(context.secrets);
     case 'ollama':
       return new OllamaProvider();
+    case 'azure':
+      return new AzureOpenAIProvider(context.secrets);
+    case 'custom':
+      return new CustomProvider(context.secrets);
     default:
       return undefined;
   }
@@ -129,77 +133,226 @@ async function initializeAIProvider(
  */
 async function configureAIProvider(context: vscode.ExtensionContext): Promise<void> {
   const config = vscode.workspace.getConfiguration('cmdify.ai');
-  const currentProvider = config.get<string>('provider', 'openai');
 
-  // Select provider
-  const providers = [
-    { label: 'OpenAI', value: 'openai', description: 'GPT-4, GPT-4o-mini' },
-    { label: 'Anthropic', value: 'anthropic', description: 'Claude Sonnet, Haiku' },
+  // Step 1: Select provider
+  interface ProviderItem extends vscode.QuickPickItem {
+    value: string;
+  }
+
+  const providers: ProviderItem[] = [
+    { label: 'OpenAI', value: 'openai', description: 'GPT-4o, GPT-4o-mini, GPT-4 Turbo' },
+    { label: 'Anthropic', value: 'anthropic', description: 'Claude Sonnet, Claude Haiku' },
     { label: 'Ollama', value: 'ollama', description: 'Local models (no API key needed)' },
+    { label: 'Azure OpenAI', value: 'azure', description: 'Azure-hosted OpenAI models' },
+    { label: 'Custom', value: 'custom', description: 'Custom OpenAI-compatible endpoint' },
   ];
 
-  const selected = await vscode.window.showQuickPick(providers, {
+  const selectedProvider = await vscode.window.showQuickPick<ProviderItem>(providers, {
     placeHolder: 'Select AI provider',
-    title: 'Configure AI Provider',
+    title: 'Step 1: Select AI Provider',
   });
 
-  if (!selected) {
+  if (!selectedProvider) {
     return;
   }
 
-  await config.update('provider', selected.value, vscode.ConfigurationTarget.Global);
+  // Handle custom provider separately
+  if (selectedProvider.value === 'custom') {
+    await configureCustomProvider(context, config);
+    return;
+  }
 
-  // Set API key for non-local providers
-  if (selected.value !== 'ollama') {
+  // Step 2: Select model (dropdown)
+  const models = getModelsForProvider(selectedProvider.value);
+  if (models.length === 0) {
+    vscode.window.showErrorMessage('No models available for this provider.');
+    return;
+  }
+
+  interface ModelItem extends vscode.QuickPickItem {
+    value: string;
+  }
+
+  const selectedModel = await vscode.window.showQuickPick<ModelItem>(models, {
+    placeHolder: 'Select model',
+    title: 'Step 2: Select AI Model',
+  });
+
+  if (!selectedModel) {
+    return;
+  }
+
+  // Step 3: Enter API key (if required)
+  if (selectedProvider.value !== 'ollama') {
+    const existingKey = await context.secrets.get(`cmdify.${selectedProvider.value}`);
     const apiKey = await vscode.window.showInputBox({
-      prompt: `Enter your ${selected.label} API key`,
+      prompt: `Enter your ${selectedProvider.label} API key`,
       password: true,
-      placeHolder: 'sk-...',
-      title: `${selected.label} API Key`,
+      placeHolder: selectedProvider.value === 'azure' ? 'Your Azure API key' : 'sk-...',
+      title: `Step 3: ${selectedProvider.label} API Key`,
+      value: existingKey ? '' : undefined,
+      validateInput: (value) => {
+        if (!value && !existingKey) {
+          return 'API key is required';
+        }
+        return undefined;
+      },
     });
 
+    // User cancelled
+    if (apiKey === undefined) {
+      return;
+    }
+
+    // Only store if a new key was provided
     if (apiKey) {
-      await context.secrets.store(`cmdify.${selected.value}`, apiKey);
-      vscode.window.showInformationMessage(`${selected.label} API key saved securely.`);
+      await context.secrets.store(`cmdify.${selectedProvider.value}`, apiKey);
     }
   }
 
-  // Set model
-  const models = getModelsForProvider(selected.value);
-  if (models.length > 0) {
-    const modelSelection = await vscode.window.showQuickPick(models, {
-      placeHolder: 'Select model',
-      title: 'Select AI Model',
+  // Step 4: Azure-specific configuration
+  if (selectedProvider.value === 'azure') {
+    const endpoint = await vscode.window.showInputBox({
+      prompt: 'Enter your Azure OpenAI endpoint',
+      placeHolder: 'https://your-resource.openai.azure.com',
+      title: 'Step 4: Azure OpenAI Endpoint',
+      validateInput: (value) => {
+        if (!value) {
+          return 'Endpoint is required for Azure';
+        }
+        if (!value.startsWith('https://')) {
+          return 'Endpoint must start with https://';
+        }
+        return undefined;
+      },
     });
 
-    if (modelSelection) {
-      await config.update('model', modelSelection.value, vscode.ConfigurationTarget.Global);
+    if (!endpoint) {
+      return;
     }
+
+    await config.update('customEndpoint', endpoint, vscode.ConfigurationTarget.Global);
+  }
+
+  // Save provider and model configuration
+  await config.update('provider', selectedProvider.value, vscode.ConfigurationTarget.Global);
+  await config.update('model', selectedModel.value, vscode.ConfigurationTarget.Global);
+
+  // Clear custom endpoint for non-Azure providers
+  if (selectedProvider.value !== 'azure') {
+    await config.update('customEndpoint', '', vscode.ConfigurationTarget.Global);
   }
 
   // Reinitialize provider
   aiProvider = await initializeAIProvider(context);
-  vscode.window.showInformationMessage(`AI provider configured: ${selected.label}`);
+  vscode.window.showInformationMessage(
+    `AI configured: ${selectedProvider.label} with ${selectedModel.label}`
+  );
 }
 
-function getModelsForProvider(provider: string): Array<{ label: string; value: string }> {
+/**
+ * Configure custom OpenAI-compatible provider
+ */
+async function configureCustomProvider(
+  context: vscode.ExtensionContext,
+  config: vscode.WorkspaceConfiguration
+): Promise<void> {
+  // Step 2: Enter custom endpoint
+  const endpoint = await vscode.window.showInputBox({
+    prompt: 'Enter your custom API endpoint',
+    placeHolder: 'https://api.example.com/v1/chat/completions',
+    title: 'Step 2: Custom API Endpoint',
+    validateInput: (value) => {
+      if (!value) {
+        return 'Endpoint is required';
+      }
+      if (!value.startsWith('http://') && !value.startsWith('https://')) {
+        return 'Endpoint must start with http:// or https://';
+      }
+      return undefined;
+    },
+  });
+
+  if (!endpoint) {
+    return;
+  }
+
+  // Step 3: Enter model name
+  const modelName = await vscode.window.showInputBox({
+    prompt: 'Enter the model name to use',
+    placeHolder: 'gpt-4o-mini, llama-3.1-70b, etc.',
+    title: 'Step 3: Model Name',
+    validateInput: (value) => {
+      if (!value) {
+        return 'Model name is required';
+      }
+      return undefined;
+    },
+  });
+
+  if (!modelName) {
+    return;
+  }
+
+  // Step 4: Enter API key (optional for some custom endpoints)
+  const apiKey = await vscode.window.showInputBox({
+    prompt: 'Enter API key (leave empty if not required)',
+    password: true,
+    placeHolder: 'API key (optional)',
+    title: 'Step 4: API Key (Optional)',
+  });
+
+  // User cancelled
+  if (apiKey === undefined) {
+    return;
+  }
+
+  // Save all configuration
+  await config.update('provider', 'custom', vscode.ConfigurationTarget.Global);
+  await config.update('customEndpoint', endpoint, vscode.ConfigurationTarget.Global);
+  await config.update('model', modelName, vscode.ConfigurationTarget.Global);
+
+  if (apiKey) {
+    await context.secrets.store('cmdify.custom', apiKey);
+  }
+
+  // Reinitialize provider
+  aiProvider = await initializeAIProvider(context);
+  vscode.window.showInformationMessage(`AI configured: Custom provider with ${modelName}`);
+}
+
+interface ModelItem extends vscode.QuickPickItem {
+  value: string;
+}
+
+function getModelsForProvider(provider: string): ModelItem[] {
   switch (provider) {
     case 'openai':
       return [
-        { label: 'GPT-4o', value: 'gpt-4o' },
-        { label: 'GPT-4o Mini (Recommended)', value: 'gpt-4o-mini' },
-        { label: 'GPT-4 Turbo', value: 'gpt-4-turbo' },
+        { label: 'GPT-4o Mini', value: 'gpt-4o-mini', description: 'Recommended - Fast and cost-effective' },
+        { label: 'GPT-4o', value: 'gpt-4o', description: 'Most capable' },
+        { label: 'GPT-4 Turbo', value: 'gpt-4-turbo', description: 'Previous generation' },
+        { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo', description: 'Budget option' },
       ];
     case 'anthropic':
       return [
-        { label: 'Claude Sonnet 4', value: 'claude-sonnet-4-20250514' },
-        { label: 'Claude Haiku 4.5', value: 'claude-haiku-4-5-20251001' },
+        { label: 'Claude Sonnet 4', value: 'claude-sonnet-4-20250514', description: 'Recommended - Best balance' },
+        { label: 'Claude Haiku 3.5', value: 'claude-3-5-haiku-20241022', description: 'Fast and affordable' },
+        { label: 'Claude Opus 4', value: 'claude-opus-4-20250514', description: 'Most capable' },
       ];
     case 'ollama':
       return [
-        { label: 'Llama 3.2', value: 'llama3.2' },
-        { label: 'Mistral', value: 'mistral' },
-        { label: 'CodeLlama', value: 'codellama' },
+        { label: 'Llama 3.2', value: 'llama3.2', description: 'Recommended - Good all-around' },
+        { label: 'Llama 3.1 8B', value: 'llama3.1:8b', description: 'Larger context window' },
+        { label: 'Mistral', value: 'mistral', description: 'Fast and efficient' },
+        { label: 'CodeLlama', value: 'codellama', description: 'Optimized for code' },
+        { label: 'Qwen 2.5 Coder', value: 'qwen2.5-coder', description: 'Good for coding tasks' },
+      ];
+    case 'azure':
+      return [
+        { label: 'GPT-4o', value: 'gpt-4o', description: 'Azure-hosted GPT-4o' },
+        { label: 'GPT-4o Mini', value: 'gpt-4o-mini', description: 'Azure-hosted GPT-4o Mini' },
+        { label: 'GPT-4', value: 'gpt-4', description: 'Azure-hosted GPT-4' },
       ];
     default:
       return [];
