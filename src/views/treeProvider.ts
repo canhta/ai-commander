@@ -202,21 +202,95 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
   }
 
   private getCommandDescription(cmd: CLICommand): string {
-    // Show source icon
+    const parts: string[] = [];
+
+    // Show truncated command preview
+    const preview = this.truncateCommand(cmd.command, 30);
+    parts.push(preview);
+
+    // Add source icon
     switch (cmd.source) {
       case 'ai':
-        return '$(sparkle)';
+        parts.push('$(sparkle)');
+        break;
       case 'shared':
-        return '$(cloud)';
+        parts.push('$(cloud)');
+        break;
       case 'imported':
-        return '$(cloud-download)';
-      default:
-        return '';
+        parts.push('$(cloud-download)');
+        break;
     }
+
+    return parts.join('  ');
+  }
+
+  private truncateCommand(command: string, maxLength: number): string {
+    // Get first line only
+    const firstLine = command.split('\n')[0].trim();
+    if (firstLine.length <= maxLength) {
+      return firstLine;
+    }
+    return firstLine.substring(0, maxLength - 1) + '…';
   }
 
   private getCommandIcon(cmd: CLICommand): string {
-    // Could be customized based on command type or tags
+    const command = cmd.command.toLowerCase();
+
+    // Git commands
+    if (command.startsWith('git ')) {
+      if (command.includes('commit')) {return 'git-commit';}
+      if (command.includes('push') || command.includes('pull')) {return 'git-pull-request';}
+      if (command.includes('branch') || command.includes('checkout')) {return 'git-branch';}
+      if (command.includes('merge')) {return 'git-merge';}
+      if (command.includes('stash')) {return 'git-stash';}
+      return 'git-commit';
+    }
+
+    // Package managers
+    if (/^(npm|yarn|pnpm|bun)\s/.test(command)) {
+      return 'package';
+    }
+
+    // Docker/containers
+    if (/^(docker|podman|kubectl|k8s)\s/.test(command)) {
+      return 'server';
+    }
+
+    // File operations
+    if (/^(cp|mv|rm|mkdir|touch|chmod|chown)\s/.test(command)) {
+      return 'file';
+    }
+
+    // Directory/navigation
+    if (/^(cd|ls|dir|find|tree)\s/.test(command)) {
+      return 'folder';
+    }
+
+    // Network/web
+    if (/^(curl|wget|ssh|scp|ping|netstat)\s/.test(command)) {
+      return 'globe';
+    }
+
+    // Python
+    if (/^(python|pip|python3|pip3)\s/.test(command)) {
+      return 'symbol-misc';
+    }
+
+    // Build tools
+    if (/^(make|cmake|cargo|go|rustc|gcc|javac)\s/.test(command)) {
+      return 'tools';
+    }
+
+    // Text processing
+    if (/^(cat|grep|awk|sed|head|tail|less|more)\s/.test(command)) {
+      return 'output';
+    }
+
+    // System
+    if (/^(sudo|apt|brew|yum|dnf|pacman)\s/.test(command)) {
+      return 'settings-gear';
+    }
+
     return 'terminal';
   }
 

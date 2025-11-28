@@ -2,7 +2,7 @@
   "name": "cmdify",
   "displayName": "Cmdify",
   "description": "AI-powered CLI command manager - Describe what you want, get the shell command",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "canhta",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -162,6 +162,12 @@
         "title": "Support on Ko-fi ❤️",
         "icon": "$(heart)",
         "category": "Cmdify"
+      },
+      {
+        "command": "cmdify.about",
+        "title": "About Cmdify",
+        "icon": "$(info)",
+        "category": "Cmdify"
       }
     ],
     "keybindings": [
@@ -186,12 +192,17 @@
         {
           "command": "cmdify.sync",
           "when": "view == cmdify.commands",
-          "group": "navigation@3"
+          "group": "1_sync"
         },
         {
           "command": "cmdify.settings",
           "when": "view == cmdify.commands",
-          "group": "navigation@4"
+          "group": "1_sync"
+        },
+        {
+          "command": "cmdify.about",
+          "when": "view == cmdify.commands",
+          "group": "2_sponsor"
         },
         {
           "command": "cmdify.sponsor",

@@ -138,6 +138,9 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('cmdify.sponsor', () =>
       vscode.env.openExternal(vscode.Uri.parse('https://ko-fi.com/canhta'))
     ),
+    vscode.commands.registerCommand('cmdify.about', () =>
+      handleAbout()
+    ),
   ];
 
   // Listen for configuration changes
@@ -414,6 +417,35 @@ async function getModelsForProvider(provider: string, context: vscode.ExtensionC
       ];
     default:
       return [];
+  }
+}
+
+/**
+ * Show about information
+ */
+async function handleAbout(): Promise<void> {
+  const extension = vscode.extensions.getExtension('canhta.cmdify');
+  const version = extension?.packageJSON?.version || 'unknown';
+
+  const message = `Cmdify v${version} - AI-powered CLI command manager\n\nDescribe what you want, get the shell command.`;
+
+  const action = await vscode.window.showInformationMessage(
+    message,
+    'GitHub',
+    'Sponsor',
+    'Settings'
+  );
+
+  switch (action) {
+    case 'GitHub':
+      vscode.env.openExternal(vscode.Uri.parse('https://github.com/canhta/cmdify'));
+      break;
+    case 'Sponsor':
+      vscode.env.openExternal(vscode.Uri.parse('https://ko-fi.com/canhta'));
+      break;
+    case 'Settings':
+      vscode.commands.executeCommand('workbench.action.openSettings', 'cmdify');
+      break;
   }
 }
 

@@ -47,7 +47,7 @@ Response format (JSON):
   "variables": [
     {"name": "var_name", "defaultValue": "value", "description": "what it is"}
   ],
-  "suggestedTags": ["suggested", "tags"]
+  "suggestedTags": ["tag1", "tag2"] // Maximum 2 tags
 }`;
 }
 
@@ -68,7 +68,7 @@ export function parseAIResponse(response: string): AIResponse {
           defaultValue: v.defaultValue || v.default,
           description: v.description,
         })),
-        suggestedTags: parsed.suggestedTags || parsed.tags,
+        suggestedTags: (parsed.suggestedTags || parsed.tags)?.slice(0, 2),
       };
     }
     // If no JSON found, treat the whole response as a command
