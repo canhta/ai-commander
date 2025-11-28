@@ -35,7 +35,7 @@ AI-powered CLI command manager for VS Code. Describe what you want, get the comm
 | `cmdify.ai.provider` | AI provider (openai/anthropic/ollama) | `openai` |
 | `cmdify.ai.model` | Model to use | `gpt-4o-mini` |
 | `cmdify.execution.confirmDestructive` | Warn on dangerous commands | `true` |
-| `cmdify.view.groupBy` | Group commands by tags/source/none | `tags` |
+| `cmdify.view.groupBy` | Group commands by tags/source/none | `none` |
 | `cmdify.sync.enabled` | Enable GitHub sync | `false` |
 
 ## AI Provider Setup
@@ -45,6 +45,12 @@ AI-powered CLI command manager for VS Code. Describe what you want, get the comm
 3. Choose a model
 
 **Ollama** runs locally - no API key needed.
+
+## Support
+
+If you find Cmdify helpful, consider supporting its development:
+
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Me-ff5f5f?logo=ko-fi&logoColor=white)](https://ko-fi.com/canhta)
 
 ## License
 
