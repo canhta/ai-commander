@@ -10,6 +10,40 @@ export function getTodayString(): string {
 }
 
 /**
+ * Parse a due date string from TODO comments
+ * Supports: YYYY-MM-DD, today, tomorrow, next-week, next-month
+ */
+export function parseDueDateString(dateStr: string): Date | undefined {
+  const lower = dateStr.toLowerCase();
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  switch (lower) {
+    case 'today':
+      return now;
+    case 'tomorrow':
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow;
+    case 'next-week':
+      const nextWeek = new Date(now);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      return nextWeek;
+    case 'next-month':
+      const nextMonth = new Date(now);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      return nextMonth;
+    default:
+      // Try YYYY-MM-DD format
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+      return undefined;
+  }
+}
+
+/**
  * Format a date as YYYY-MM-DD string
  */
 export function formatDateString(date: Date): string {

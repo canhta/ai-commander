@@ -22,6 +22,11 @@ import { CompanionService } from './services/companion';
 import { CompanionPanelProvider } from './views/companionPanel';
 import { formatTime } from './utils/dateUtils';
 import { COMPANION_ICONS } from './models/companion';
+import { TodoScannerService } from './services/todoScanner';
+import { TodoSyncService } from './services/todoSync';
+import { ReminderService } from './services/reminder';
+import { createTodoTreeView, TodoTreeItem } from './views/todoTreeProvider';
+import { DetectedTodo, GlobalReminder } from './models/todo';
 
 let storage: StorageService;
 let treeProvider: CommandsTreeProvider;
@@ -30,6 +35,10 @@ let aiProvider: AIProvider | undefined;
 let focusService: FocusService;
 let companionService: CompanionService;
 let focusStatusBarItem: vscode.StatusBarItem;
+let todoScannerService: TodoScannerService;
+let todoSyncService: TodoSyncService;
+let reminderService: ReminderService;
+let todoStatusBarItem: vscode.StatusBarItem;
 
 /**
  * Update the noCommands context for welcome view
@@ -122,6 +131,34 @@ export async function activate(context: vscode.ExtensionContext) {
     companionPanelProvider
   );
 
+  // Initialize TODO Scanner services
+  todoScannerService = new TodoScannerService(context);
+  todoSyncService = new TodoSyncService(context, todoScannerService);
+  reminderService = new ReminderService(context, todoScannerService, todoSyncService);
+
+  // Create TODO tree view
+  const { treeView: todoTreeView, provider: todoTreeProvider } = createTodoTreeView(
+    todoScannerService,
+    reminderService
+  );
+
+  // Initialize TODO status bar
+  todoStatusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    99
+  );
+  todoStatusBarItem.command = 'cmdify.todos.scan';
+  updateTodoStatusBar();
+  todoStatusBarItem.show();
+
+  // Listen for TODO changes
+  todoScannerService.onTodosChanged(() => updateTodoStatusBar());
+
+  // Initial workspace scan (delayed to not block activation)
+  setTimeout(() => {
+    todoScannerService.scanWorkspace();
+  }, 2000);
+
   // Register commands
   const commands = [
     vscode.commands.registerCommand('cmdify.create', () =>
@@ -197,6 +234,72 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('cmdify.focus.showPanel', () =>
       vscode.commands.executeCommand('cmdify.focus.focus')
     ),
+    // TODO Scanner commands
+    vscode.commands.registerCommand('cmdify.todos.scan', async () => {
+      const count = await todoScannerService.scanWorkspace();
+      vscode.window.showInformationMessage(`📋 Found ${count.length} TODO items`);
+    }),
+    vscode.commands.registerCommand('cmdify.todos.refresh', () =>
+      todoTreeProvider.refresh()
+    ),
+    vscode.commands.registerCommand('cmdify.todo.goToCode', async (item: TodoTreeItem | DetectedTodo) => {
+      const todo = (item as TodoTreeItem).todo ?? (item as DetectedTodo);
+      if (todo && 'filePath' in todo) {
+        await todoSyncService.goToTodo(todo);
+      }
+    }),
+    vscode.commands.registerCommand('cmdify.todo.setReminder', async (item: TodoTreeItem | DetectedTodo) => {
+      const todo = (item as TodoTreeItem).todo ?? (item as DetectedTodo);
+      if (todo && 'filePath' in todo) {
+        await reminderService.setTodoReminderInteractive(todo);
+      }
+    }),
+    vscode.commands.registerCommand('cmdify.todo.complete', async (item: TodoTreeItem | DetectedTodo) => {
+      const todo = (item as TodoTreeItem).todo ?? (item as DetectedTodo);
+      if (todo && 'id' in todo && todo.id) {
+        await todoScannerService.markComplete(todo.id);
+        vscode.window.showInformationMessage('✅ TODO marked as complete');
+      }
+    }),
+    vscode.commands.registerCommand('cmdify.todo.markDone', async (item: TodoTreeItem | DetectedTodo) => {
+      const todo = (item as TodoTreeItem).todo ?? (item as DetectedTodo);
+      if (todo && 'filePath' in todo) {
+        await todoSyncService.markDoneInCode(todo);
+      }
+    }),
+    vscode.commands.registerCommand('cmdify.todo.delete', async (item: TodoTreeItem | DetectedTodo) => {
+      const todo = (item as TodoTreeItem).todo ?? (item as DetectedTodo);
+      if (todo && 'filePath' in todo) {
+        await todoSyncService.deleteTodoLine(todo);
+      }
+    }),
+    vscode.commands.registerCommand('cmdify.reminder.add', async () => {
+      const reminder = await reminderService.createGlobalReminderInteractive();
+      if (reminder) {
+        todoTreeProvider.refresh();
+        vscode.window.showInformationMessage(`🔔 Reminder set for ${reminder.dueAt.toLocaleString()}`);
+      }
+    }),
+    vscode.commands.registerCommand('cmdify.reminder.complete', async (item: TodoTreeItem) => {
+      if (item.reminder) {
+        await reminderService.completeGlobalReminder(item.reminder.id);
+        todoTreeProvider.refresh();
+        vscode.window.showInformationMessage('✅ Reminder completed');
+      }
+    }),
+    vscode.commands.registerCommand('cmdify.reminder.delete', async (item: TodoTreeItem) => {
+      if (item.reminder) {
+        const confirm = await vscode.window.showWarningMessage(
+          `Delete reminder "${item.reminder.title}"?`,
+          { modal: true },
+          'Delete'
+        );
+        if (confirm === 'Delete') {
+          await reminderService.deleteGlobalReminder(item.reminder.id);
+          todoTreeProvider.refresh();
+        }
+      }
+    }),
   ];
 
   // Listen for configuration changes
@@ -216,6 +319,12 @@ export async function activate(context: vscode.ExtensionContext) {
     companionService,
     focusStatusBarItem,
     companionPanelDisposable,
+    todoScannerService,
+    todoSyncService,
+    reminderService,
+    todoTreeView,
+    todoTreeProvider,
+    todoStatusBarItem,
     ...commands
   );
 }
@@ -243,6 +352,25 @@ function updateFocusStatusBar(): void {
 
   focusStatusBarItem.text = text;
   focusStatusBarItem.tooltip = getFocusTooltip(focusState.status, focusState.todaySessions);
+}
+
+/**
+ * Update the TODO status bar
+ */
+function updateTodoStatusBar(): void {
+  const openCount = todoScannerService.getOpenCount();
+  const dueCount = todoScannerService.getDueCount();
+  
+  if (openCount === 0) {
+    todoStatusBarItem.text = '$(checklist) 0';
+    todoStatusBarItem.tooltip = 'No TODOs found - Click to scan workspace';
+  } else if (dueCount > 0) {
+    todoStatusBarItem.text = `$(checklist) ${openCount} $(warning) ${dueCount}`;
+    todoStatusBarItem.tooltip = `${openCount} TODOs (${dueCount} due/overdue) - Click to scan`;
+  } else {
+    todoStatusBarItem.text = `$(checklist) ${openCount}`;
+    todoStatusBarItem.tooltip = `${openCount} TODOs - Click to scan workspace`;
+  }
 }
 
 /**
@@ -565,6 +693,15 @@ export function deactivate() {
   }
   if (companionService) {
     companionService.dispose();
+  }
+  if (todoScannerService) {
+    todoScannerService.dispose();
+  }
+  if (todoSyncService) {
+    todoSyncService.dispose();
+  }
+  if (reminderService) {
+    reminderService.dispose();
   }
 }
 

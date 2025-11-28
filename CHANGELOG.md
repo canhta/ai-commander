@@ -5,6 +5,26 @@ All notable changes to Cmdify will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.6] - 2025-11-28
+
+### Added
+
+- TODO Scanner & Reminder System
+  - Automatically scans workspace for TODO, FIXME, HACK, BUG, and other comment markers
+  - Sidebar tree view organized by due date (Overdue, Today, This Week, No Date)
+  - Set reminders on TODOs with date annotations (@2024-12-01, @tomorrow, @next-week)
+  - Two-way sync: adding reminders updates the code comments
+  - Global reminders not tied to code
+  - Notification system with snooze and complete actions
+  - Configurable file patterns and custom regex patterns
+- TODO status bar item showing count of due items
+- Context menu actions for TODOs (Go to Code, Set Reminder, Mark Complete, Delete)
+
+### Changed
+
+- Added TODOs & Reminders view to the Cmdify sidebar
+- Extended configuration with TODO scanner settings
+
 ## [0.0.5] - 2025-11-28
 
 ### Added

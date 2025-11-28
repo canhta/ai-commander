@@ -19,6 +19,14 @@ AI-powered CLI command manager for VS Code. Describe what you want, get the comm
 - **Session Tracking** - Track completed sessions and maintain daily streaks
 - **Status Bar Integration** - Quick access to timer controls from the status bar
 
+### TODO Scanner & Reminders
+- **Workspace Scanning** - Automatically finds TODO, FIXME, HACK, BUG comments in your code
+- **Due Date Tracking** - Use `@2024-12-01`, `@tomorrow`, `@next-week` in comments to set deadlines
+- **Organized View** - Sidebar groups TODOs by Overdue, Today, This Week, and No Date
+- **Two-Way Sync** - Adding reminders updates your code comments automatically
+- **Notifications** - Get reminded when TODOs are due with snooze options
+- **Global Reminders** - Create reminders not tied to specific code
+
 ## Quick Start
 
 1. Press `Cmd+Shift+C` (Mac) or `Ctrl+Shift+C` (Windows/Linux)
@@ -37,6 +45,9 @@ AI-powered CLI command manager for VS Code. Describe what you want, get the comm
 | `Cmdify Focus: Start Focus Session` | Start a focus timer session |
 | `Cmdify Focus: Pause Focus Session` | Pause the current session |
 | `Cmdify Focus: Stop Focus Session` | Stop and reset the timer |
+| `Cmdify TODOs: Scan Workspace` | Scan workspace for TODO comments |
+| `Cmdify TODOs: Add Reminder` | Create a global reminder |
+| `Cmdify TODOs: Set Reminder` | Set a due date on a TODO |
 
 ## Settings
 
@@ -57,6 +68,14 @@ AI-powered CLI command manager for VS Code. Describe what you want, get the comm
 | `cmdify.focus.longBreakDuration` | Long break duration (minutes) | `15` |
 | `cmdify.focus.sessionsBeforeLongBreak` | Sessions before long break | `4` |
 | `cmdify.focus.companionType` | Companion character | `robot` |
+
+### TODO Scanner Settings
+| Setting | Description | Default |
+|---------|-------------|--------|
+| `cmdify.todos.includePatterns` | File patterns to scan | `**/*.ts`, `**/*.js`, etc. |
+| `cmdify.todos.excludePatterns` | Patterns to exclude | `**/node_modules/**`, etc. |
+| `cmdify.todos.scanOnSave` | Auto-scan on file save | `true` |
+| `cmdify.todos.customPatterns` | Custom regex patterns | `[]` |
 
 ## AI Provider Setup
 
