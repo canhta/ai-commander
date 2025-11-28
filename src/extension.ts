@@ -21,12 +21,23 @@ let treeProvider: CommandsTreeProvider;
 let syncService: GitHubSyncService;
 let aiProvider: AIProvider | undefined;
 
+/**
+ * Update the noCommands context for welcome view
+ */
+async function updateNoCommandsContext(): Promise<void> {
+  const hasCommands = storage.getAll().length > 0;
+  await vscode.commands.executeCommand('setContext', 'cmdify.noCommands', !hasCommands);
+}
+
 export async function activate(context: vscode.ExtensionContext) {
   console.log('Cmdify is now active!');
 
   // Initialize storage
   storage = new StorageService(context);
   await storage.initialize();
+
+  // Set initial context for welcome view
+  await updateNoCommandsContext();
 
   // Initialize AI provider
   aiProvider = await initializeAIProvider(context);
@@ -39,6 +50,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const treeView = vscode.window.createTreeView('cmdify.commands', {
     treeDataProvider: treeProvider,
     showCollapseAll: true,
+  });
+
+  // Update context when storage changes
+  storage.onDidChange(async () => {
+    await updateNoCommandsContext();
   });
 
   // Register commands

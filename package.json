@@ -29,6 +29,13 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "cmdify.commands",
+        "contents": "No commands yet.\n[Create Command](command:cmdify.create)\n\nDescribe what you want to do and let AI generate the command for you.\n\n[☕ Buy Me a Coffee](command:cmdify.sponsor)",
+        "when": "cmdify.noCommands"
+      }
+    ],
     "commands": [
       {
         "command": "cmdify.create",
@@ -139,6 +146,11 @@
           "command": "cmdify.settings",
           "when": "view == cmdify.commands",
           "group": "navigation@4"
+        },
+        {
+          "command": "cmdify.sponsor",
+          "when": "view == cmdify.commands",
+          "group": "2_sponsor"
         }
       ],
       "view/item/context": [
