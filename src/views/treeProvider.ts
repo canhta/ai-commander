@@ -28,6 +28,10 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
       return Promise.resolve(this.getRootItems());
     }
 
+    if (element.itemType === 'favorites') {
+      return Promise.resolve(this.getFavoriteCommands());
+    }
+
     if (element.itemType === 'recent') {
       return Promise.resolve(this.getRecentCommands());
     }
@@ -46,9 +50,18 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
   private getRootItems(): CommandTreeItem[] {
     const config = vscode.workspace.getConfiguration('cmdify.view');
     const showRecent = config.get<boolean>('showRecent', true);
+    const showFavorites = config.get<boolean>('showFavorites', true);
     const groupBy = config.get<string>('groupBy', 'tags');
 
     const items: CommandTreeItem[] = [];
+
+    // Favorites section
+    if (showFavorites) {
+      const favoritesCount = this.storage.getFavorites().length;
+      if (favoritesCount > 0) {
+        items.push(this.createCategoryItem('Favorites', 'favorites', favoritesCount, 'star-full'));
+      }
+    }
 
     // Recent section
     if (showRecent) {
@@ -121,6 +134,11 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
     return items;
   }
 
+  private getFavoriteCommands(): CommandTreeItem[] {
+    const favorites = this.storage.getFavorites();
+    return favorites.map((cmd) => this.createCommandItem(cmd));
+  }
+
   private getRecentCommands(): CommandTreeItem[] {
     const config = vscode.workspace.getConfiguration('cmdify.view');
     const recentCount = config.get<number>('recentCount', 5);
@@ -162,15 +180,19 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
   }
 
   private createCommandItem(cmd: CLICommand): CommandTreeItem {
+    const displayLabel = cmd.isFavorite 
+      ? `$(star-full) ${getDisplayName(cmd)}`
+      : getDisplayName(cmd);
+    
     const item: CommandTreeItem = {
-      label: getDisplayName(cmd),
+      label: displayLabel,
       tooltip: new vscode.MarkdownString(this.formatTooltip(cmd)),
       description: this.getCommandDescription(cmd),
       itemType: 'command',
       commandData: cmd,
       collapsibleState: vscode.TreeItemCollapsibleState.None,
       iconPath: new vscode.ThemeIcon(this.getCommandIcon(cmd)),
-      contextValue: 'command',
+      contextValue: cmd.isFavorite ? 'commandFavorite' : 'command',
     };
 
     return item;

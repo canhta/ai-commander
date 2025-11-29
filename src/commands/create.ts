@@ -56,6 +56,28 @@ async function handleManualCreate(
   command: string,
   storage: StorageService
 ): Promise<CLICommand | undefined> {
+  // Check for duplicates
+  const duplicate = storage.findDuplicate(command);
+  if (duplicate) {
+    const action = await vscode.window.showWarningMessage(
+      `A similar command already exists:\n\n"${duplicate.prompt || duplicate.command}"`,
+      { modal: true },
+      'Save Anyway',
+      'Edit Existing',
+      'Cancel'
+    );
+
+    if (action === 'Cancel' || !action) {
+      return undefined;
+    }
+
+    if (action === 'Edit Existing') {
+      await vscode.commands.executeCommand('cmdify.edit', { commandData: duplicate });
+      return undefined;
+    }
+    // Continue with 'Save Anyway'
+  }
+
   // Ask for optional prompt/description
   const prompt = await vscode.window.showInputBox({
     prompt: 'Add a description (optional)',
@@ -253,6 +275,30 @@ async function showAIPreview(
   // Extract and merge variables
   const extractedVars = extractVariables(command);
   const variables = mergeVariables(extractedVars, response.variables);
+
+  // Check for duplicates before saving
+  const duplicate = storage.findDuplicate(command);
+  if (duplicate) {
+    const action = await vscode.window.showWarningMessage(
+      `A similar command already exists:\n\n"${duplicate.prompt || duplicate.command}"`,
+      { modal: true },
+      'Save Anyway',
+      'Use Existing',
+      'Cancel'
+    );
+
+    if (action === 'Cancel' || !action) {
+      return { action: 'cancelled' };
+    }
+
+    if (action === 'Use Existing') {
+      if (selection.label === '$(play) Run & Save') {
+        await vscode.commands.executeCommand('cmdify.runFromTree', { commandData: duplicate });
+      }
+      return { action: 'saved', command: duplicate };
+    }
+    // Continue with 'Save Anyway'
+  }
 
   const newCommand = createCommand(prompt, command, 'ai', {
     tags: response.suggestedTags || [],

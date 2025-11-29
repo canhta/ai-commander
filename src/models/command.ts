@@ -42,6 +42,9 @@ export interface CLICommand {
   // Security
   skipDestructiveWarning?: boolean;  // Don't warn for this command
 
+  // Organization
+  isFavorite?: boolean;  // Mark as favorite for quick access
+
   // Sync
   syncId?: string;
 }
@@ -90,6 +93,7 @@ export function createCommand(
     tags: [],
     source,
     usageCount: 0,
+    isFavorite: false,
     createdAt: now,
     updatedAt: now,
     ...options,

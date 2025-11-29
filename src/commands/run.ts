@@ -5,7 +5,7 @@ import { StorageService } from '../services/storage';
 import { analyzeCommand, getWarningMessage } from '../services/security';
 import { executeCommand, getWorkspaceFolder, promptWorkingDirectory } from '../utils/shell';
 import { hasVariables, extractVariables, promptForVariablesWithPreview } from '../utils/variables';
-import { selectCommand, createCommandQuickPickItems } from '../utils/quickPick';
+import { selectCommand, selectCommandWithFuzzySearch } from '../utils/quickPick';
 
 /**
  * Handle running a command
@@ -18,6 +18,7 @@ export async function handleRun(
     placeHolder: 'Select a command to run',
     emptyMessage: 'No commands saved yet.',
     showCreateOption: true,
+    useEnhancedUI: true,
   });
 
   if (cmd) {
@@ -129,40 +130,42 @@ export async function handleCopy(
 }
 
 /**
- * Search and optionally generate commands
+ * Search and optionally generate commands with fuzzy search
  */
 export async function handleSearch(storage: StorageService): Promise<void> {
-  const commands = storage.getAll();
-  const items: vscode.QuickPickItem[] = createCommandQuickPickItems(commands);
-
-  // Add AI generation option
-  items.push({
-    label: '$(sparkle) Generate with AI...',
-    description: 'Describe what you want to do',
-    alwaysShow: true,
-  });
-
-  const selection = await vscode.window.showQuickPick(items, {
+  const result = await selectCommandWithFuzzySearch(storage, {
     placeHolder: 'Search or describe a command...',
-    matchOnDetail: true,
-    matchOnDescription: true,
+    showAIOption: true,
   });
 
-  if (!selection) {
-    return;
-  }
-
-  if (selection.label === '$(sparkle) Generate with AI...') {
+  if (result.generateAI) {
     await vscode.commands.executeCommand('cmdify.create');
     return;
   }
 
-  // Find and run the selected command
-  const cmd = commands.find(
-    (c) => (c.prompt || c.command) === selection.label && c.command === selection.detail
-  );
+  if (result.command) {
+    await runCommand(result.command, storage);
+  }
+}
+
+/**
+ * Handle toggling favorite status
+ */
+export async function handleToggleFavorite(
+  item: CommandTreeItem | undefined,
+  storage: StorageService
+): Promise<void> {
+  const cmd = await selectCommand(item, storage, {
+    placeHolder: 'Select a command to toggle favorite',
+    emptyMessage: 'No commands available.',
+    useEnhancedUI: true,
+  });
 
   if (cmd) {
-    await runCommand(cmd, storage);
+    const isFavorite = await storage.toggleFavorite(cmd.id);
+    const message = isFavorite 
+      ? `⭐ "${cmd.prompt || cmd.command}" added to favorites`
+      : `"${cmd.prompt || cmd.command}" removed from favorites`;
+    vscode.window.showInformationMessage(message);
   }
 }
