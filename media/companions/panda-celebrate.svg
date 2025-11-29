@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .body { animation: bounce 0.5s ease-in-out infinite; }
+    .arms { animation: wave 0.6s ease-in-out infinite alternate; }
+    .sparkle { animation: sparkle 1s ease-in-out infinite; }
+    .confetti { animation: fall 2s linear infinite; }
+    
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-6px) scale(1.02); }
+    }
+    @keyframes wave {
+      0% { transform: rotate(-15deg); }
+      100% { transform: rotate(15deg); }
+    }
+    @keyframes sparkle {
+      0%, 100% { opacity: 0; transform: scale(0.5); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes fall {
+      0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(20px) rotate(180deg); opacity: 0; }
+    }
+  </style>
+  
+  <g class="body" style="transform-origin: 32px 40px">
+    <!-- Ears -->
+    <rect x="8" y="6" width="10" height="10" fill="#2d2d2d"/>
+    <rect x="44" y="6" width="10" height="10" fill="#2d2d2d"/>
+    
+    <!-- Head -->
+    <rect x="12" y="12" width="38" height="26" fill="#ffffff"/>
+    <rect x="10" y="16" width="4" height="18" fill="#ffffff"/>
+    <rect x="48" y="16" width="4" height="18" fill="#ffffff"/>
+    
+    <!-- Eye patches -->
+    <rect x="14" y="16" width="12" height="12" fill="#2d2d2d"/>
+    <rect x="36" y="16" width="12" height="12" fill="#2d2d2d"/>
+    
+    <!-- Super happy eyes (stars) -->
+    <rect x="17" y="19" width="6" height="6" fill="#ffffff"/>
+    <rect x="19" y="20" width="2" height="4" fill="#fbbf24"/>
+    <rect x="18" y="21" width="4" height="2" fill="#fbbf24"/>
+    
+    <rect x="39" y="19" width="6" height="6" fill="#ffffff"/>
+    <rect x="41" y="20" width="2" height="4" fill="#fbbf24"/>
+    <rect x="40" y="21" width="4" height="2" fill="#fbbf24"/>
+    
+    <!-- Big blush -->
+    <rect x="10" y="26" width="6" height="3" fill="#ff8fab"/>
+    <rect x="46" y="26" width="6" height="3" fill="#ff8fab"/>
+    
+    <!-- Nose -->
+    <rect x="28" y="28" width="6" height="4" fill="#2d2d2d"/>
+    
+    <!-- Big happy open mouth -->
+    <rect x="24" y="32" width="14" height="6" fill="#2d2d2d"/>
+    <rect x="26" y="33" width="10" height="4" fill="#ff6b6b"/>
+    <rect x="28" y="33" width="2" height="2" fill="#ffffff"/>
+    <rect x="32" y="33" width="2" height="2" fill="#ffffff"/>
+    
+    <!-- Body -->
+    <rect x="14" y="38" width="34" height="16" fill="#ffffff"/>
+    <rect x="24" y="42" width="14" height="10" fill="#e0e0e0"/>
+    
+    <!-- Waving arms up -->
+    <g class="arms" style="transform-origin: 10px 44px">
+      <rect x="2" y="32" width="8" height="14" fill="#2d2d2d"/>
+    </g>
+    <g class="arms" style="transform-origin: 52px 44px; animation-delay: 0.3s">
+      <rect x="52" y="32" width="8" height="14" fill="#2d2d2d"/>
+    </g>
+    
+    <!-- Legs -->
+    <rect x="16" y="52" width="10" height="6" fill="#2d2d2d"/>
+    <rect x="36" y="52" width="10" height="6" fill="#2d2d2d"/>
+    
+    <!-- Paw pads -->
+    <rect x="18" y="56" width="2" height="2" fill="#ffb4b4"/>
+    <rect x="22" y="56" width="2" height="2" fill="#ffb4b4"/>
+    <rect x="38" y="56" width="2" height="2" fill="#ffb4b4"/>
+    <rect x="42" y="56" width="2" height="2" fill="#ffb4b4"/>
+  </g>
+  
+  <!-- Sparkles -->
+  <g class="sparkle">
+    <rect x="4" y="10" width="2" height="6" fill="#fbbf24"/>
+    <rect x="2" y="12" width="6" height="2" fill="#fbbf24"/>
+  </g>
+  <g class="sparkle" style="animation-delay: 0.3s">
+    <rect x="56" y="8" width="2" height="6" fill="#fbbf24"/>
+    <rect x="54" y="10" width="6" height="2" fill="#fbbf24"/>
+  </g>
+  <g class="sparkle" style="animation-delay: 0.6s">
+    <rect x="30" y="2" width="2" height="4" fill="#fbbf24"/>
+    <rect x="28" y="3" width="6" height="2" fill="#fbbf24"/>
+  </g>
+  
+  <!-- Confetti -->
+  <rect class="confetti" x="10" y="2" width="3" height="3" fill="#f472b6"/>
+  <rect class="confetti" style="animation-delay: 0.4s" x="24" y="0" width="3" height="3" fill="#60a5fa"/>
+  <rect class="confetti" style="animation-delay: 0.8s" x="38" y="2" width="3" height="3" fill="#4ade80"/>
+  <rect class="confetti" style="animation-delay: 1.2s" x="52" y="0" width="3" height="3" fill="#fbbf24"/>
+</svg>

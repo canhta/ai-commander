@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .body { animation: relax 4s ease-in-out infinite; }
+    .glow { animation: softPulse 3s ease-in-out infinite; }
+    .zzz { animation: float 2s ease-in-out infinite; }
+    .moon { animation: moonGlow 4s ease-in-out infinite; }
+    
+    @keyframes relax {
+      0%, 100% { transform: translateY(0) rotate(-5deg); }
+      50% { transform: translateY(-2px) rotate(5deg); }
+    }
+    @keyframes softPulse {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 0.4; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); opacity: 0.5; }
+      50% { transform: translateY(-5px); opacity: 1; }
+    }
+    @keyframes moonGlow {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+  </style>
+  
+  <!-- Soft glow -->
+  <rect class="glow" x="20" y="8" width="24" height="50" fill="#c4b5fd"/>
+  <rect class="glow" x="10" y="18" width="44" height="28" fill="#c4b5fd"/>
+  
+  <g class="body" style="transform-origin: 32px 32px">
+    <!-- Star shape - relaxed purple tint -->
+    <!-- Top point -->
+    <rect x="28" y="10" width="8" height="8" fill="#e9d5ff"/>
+    <rect x="26" y="14" width="12" height="6" fill="#e9d5ff"/>
+    
+    <!-- Middle row -->
+    <rect x="10" y="20" width="44" height="14" fill="#e9d5ff"/>
+    <rect x="14" y="18" width="36" height="18" fill="#e9d5ff"/>
+    
+    <!-- Lower extensions -->
+    <rect x="14" y="36" width="10" height="6" fill="#e9d5ff"/>
+    <rect x="40" y="36" width="10" height="6" fill="#e9d5ff"/>
+    
+    <!-- Bottom points -->
+    <rect x="16" y="42" width="6" height="6" fill="#e9d5ff"/>
+    <rect x="18" y="48" width="4" height="4" fill="#e9d5ff"/>
+    
+    <rect x="42" y="42" width="6" height="6" fill="#e9d5ff"/>
+    <rect x="44" y="48" width="4" height="4" fill="#e9d5ff"/>
+    
+    <!-- Center body -->
+    <rect x="24" y="34" width="16" height="12" fill="#e9d5ff"/>
+    <rect x="28" y="46" width="8" height="4" fill="#e9d5ff"/>
+    <rect x="30" y="50" width="4" height="4" fill="#e9d5ff"/>
+    
+    <!-- Highlights -->
+    <rect x="30" y="12" width="2" height="3" fill="#faf5ff"/>
+    <rect x="16" y="22" width="3" height="3" fill="#faf5ff"/>
+    
+    <!-- Face -->
+    <!-- Sleeping eyes (closed happy) -->
+    <rect x="20" y="28" width="6" height="2" fill="#7c3aed"/>
+    <rect x="38" y="28" width="6" height="2" fill="#7c3aed"/>
+    
+    <!-- Blush -->
+    <rect x="16" y="30" width="4" height="2" fill="#fda4af"/>
+    <rect x="44" y="30" width="4" height="2" fill="#fda4af"/>
+    
+    <!-- Peaceful smile -->
+    <rect x="28" y="34" width="8" height="2" fill="#7c3aed"/>
+    <rect x="28" y="36" width="2" height="2" fill="#7c3aed"/>
+    <rect x="34" y="36" width="2" height="2" fill="#7c3aed"/>
+  </g>
+  
+  <!-- Moon companion -->
+  <g class="moon">
+    <rect x="50" y="4" width="10" height="10" fill="#fef3c7"/>
+    <rect x="52" y="2" width="6" height="14" fill="#fef3c7"/>
+    <rect x="54" y="6" width="4" height="4" fill="#fcd34d"/>
+  </g>
+  
+  <!-- Z's -->
+  <g class="zzz">
+    <rect x="44" y="14" width="4" height="2" fill="#a78bfa"/>
+    <rect x="46" y="12" width="2" height="2" fill="#a78bfa"/>
+    <rect x="44" y="10" width="4" height="2" fill="#a78bfa"/>
+  </g>
+  <g class="zzz" style="animation-delay: 0.5s">
+    <rect x="50" y="10" width="3" height="2" fill="#a78bfa"/>
+    <rect x="51" y="8" width="2" height="2" fill="#a78bfa"/>
+    <rect x="50" y="6" width="3" height="2" fill="#a78bfa"/>
+  </g>
+  
+  <!-- Small stars around -->
+  <rect x="4" y="20" width="2" height="2" fill="#c4b5fd"/>
+  <rect x="8" y="36" width="2" height="2" fill="#c4b5fd"/>
+  <rect x="56" y="40" width="2" height="2" fill="#c4b5fd"/>
+</svg>

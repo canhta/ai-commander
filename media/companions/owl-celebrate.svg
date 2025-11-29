@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .body { animation: bounce 0.5s ease-out infinite; }
+    .wing { animation: flap 0.3s ease-in-out infinite; }
+    .sparkle { animation: sparkle 0.8s ease-in-out infinite; }
+    
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    @keyframes flap {
+      0%, 100% { transform: rotate(-10deg); }
+      50% { transform: rotate(10deg); }
+    }
+    @keyframes sparkle {
+      0%, 100% { opacity: 0; transform: scale(0.5); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+  </style>
+  
+  <g class="body">
+    <!-- Celebration glow -->
+    <rect x="6" y="2" width="52" height="58" fill="#ffd700" opacity="0.15"/>
+    
+    <!-- Ear tufts (excited) -->
+    <rect x="8" y="4" width="4" height="4" fill="#8b4513"/>
+    <rect x="10" y="0" width="2" height="4" fill="#8b4513"/>
+    <rect x="12" y="2" width="2" height="4" fill="#8b4513"/>
+    
+    <rect x="48" y="4" width="4" height="4" fill="#8b4513"/>
+    <rect x="48" y="0" width="2" height="4" fill="#8b4513"/>
+    <rect x="46" y="2" width="2" height="4" fill="#8b4513"/>
+    
+    <!-- Head -->
+    <rect x="12" y="6" width="36" height="26" fill="#8b4513"/>
+    <rect x="16" y="10" width="28" height="18" fill="#d2691e"/>
+    
+    <!-- Face disc -->
+    <rect x="14" y="12" width="14" height="14" fill="#f5deb3"/>
+    <rect x="32" y="12" width="14" height="14" fill="#f5deb3"/>
+    
+    <!-- Eyes (excited, sparkling) -->
+    <rect x="16" y="14" width="10" height="10" fill="#ffd700"/>
+    <rect x="18" y="16" width="6" height="6" fill="#2d2d2d"/>
+    <rect x="20" y="16" width="2" height="2" fill="#ffffff"/>
+    <rect x="22" y="18" width="2" height="2" fill="#ffd700"/>
+    
+    <rect x="34" y="14" width="10" height="10" fill="#ffd700"/>
+    <rect x="36" y="16" width="6" height="6" fill="#2d2d2d"/>
+    <rect x="38" y="16" width="2" height="2" fill="#ffffff"/>
+    <rect x="40" y="18" width="2" height="2" fill="#ffd700"/>
+    
+    <!-- Beak (happy) -->
+    <rect x="28" y="22" width="4" height="2" fill="#ffa500"/>
+    <rect x="27" y="24" width="6" height="2" fill="#ffa500"/>
+    
+    <!-- Body -->
+    <rect x="16" y="32" width="28" height="18" fill="#8b4513"/>
+    <rect x="20" y="34" width="20" height="14" fill="#d2691e"/>
+    
+    <!-- Chest pattern -->
+    <rect x="22" y="36" width="4" height="4" fill="#f5deb3"/>
+    <rect x="28" y="36" width="4" height="4" fill="#f5deb3"/>
+    <rect x="34" y="36" width="4" height="4" fill="#f5deb3"/>
+    <rect x="25" y="40" width="4" height="4" fill="#f5deb3"/>
+    <rect x="31" y="40" width="4" height="4" fill="#f5deb3"/>
+    
+    <!-- Feet -->
+    <rect x="20" y="50" width="8" height="4" fill="#ffa500"/>
+    <rect x="32" y="50" width="8" height="4" fill="#ffa500"/>
+    
+    <!-- Wings (spread, flapping) -->
+    <g class="wing" style="transform-origin: 10px 42px">
+      <rect x="2" y="32" width="14" height="16" fill="#8b4513"/>
+      <rect x="4" y="34" width="10" height="12" fill="#6b4423"/>
+    </g>
+    <g class="wing" style="transform-origin: 54px 42px; animation-delay: 0.15s">
+      <rect x="48" y="32" width="14" height="16" fill="#8b4513"/>
+      <rect x="50" y="34" width="10" height="12" fill="#6b4423"/>
+    </g>
+  </g>
+  
+  <!-- Sparkles -->
+  <g class="sparkle">
+    <rect x="4" y="8" width="2" height="2" fill="#ffd700"/>
+    <rect x="2" y="10" width="2" height="2" fill="#ffd700"/>
+    <rect x="6" y="10" width="2" height="2" fill="#ffd700"/>
+    <rect x="4" y="12" width="2" height="2" fill="#ffd700"/>
+  </g>
+  <g class="sparkle" style="animation-delay: 0.3s">
+    <rect x="56" y="6" width="2" height="2" fill="#ffd700"/>
+    <rect x="54" y="8" width="2" height="2" fill="#ffd700"/>
+    <rect x="58" y="8" width="2" height="2" fill="#ffd700"/>
+    <rect x="56" y="10" width="2" height="2" fill="#ffd700"/>
+  </g>
+  <g class="sparkle" style="animation-delay: 0.6s">
+    <rect x="30" y="0" width="2" height="2" fill="#ffd700"/>
+    <rect x="28" y="2" width="2" height="2" fill="#ffd700"/>
+    <rect x="32" y="2" width="2" height="2" fill="#ffd700"/>
+  </g>
+</svg>

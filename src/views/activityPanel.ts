@@ -85,12 +85,14 @@ export class ActivityPanelProvider implements vscode.Disposable {
       const today = this.activityService.getToday();
       const stats = this.activityService.getStats();
       const topLanguages = this.activityService.getTopLanguages(5);
+      const config = this.activityService.getConfig();
 
       this.panel.webview.postMessage({
         type: 'update',
         today,
         stats,
         topLanguages,
+        dailyGoalMinutes: config.dailyGoalMinutes,
       });
     }
   }
@@ -409,13 +411,13 @@ export class ActivityPanelProvider implements vscode.Disposable {
       const msg = e.data;
       if (msg.type !== 'update') return;
       
-      const { today, stats, topLanguages } = msg;
+      const { today, stats, topLanguages, dailyGoalMinutes } = msg;
       
       // Update today's time
       document.getElementById('todayTime').textContent = formatHoursMinutes(today.totalMinutes);
       document.getElementById('progressFill').style.width = stats.todayGoalProgress + '%';
       document.getElementById('progressLabel').textContent = 
-        'Goal: ' + formatMinutes(${config.dailyGoalMinutes}) + ' (' + stats.todayGoalProgress + '%)';
+        'Goal: ' + formatMinutes(dailyGoalMinutes) + ' (' + stats.todayGoalProgress + '%)';
       
       // Update tomatoes
       document.getElementById('tomatoDisplay').innerHTML = getTomatoDisplay(today.focusSessions, 6);

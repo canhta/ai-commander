@@ -187,7 +187,51 @@ export async function activate(context: vscode.ExtensionContext) {
   focusService.onSessionComplete(async () => {
     const focusConfig = focusService.getConfig();
     await activityService.recordFocusSession(focusConfig.focusDuration);
+
+    // Award XP for completing focus session
+    await companionService.awardXP(100, 'focusSessionComplete');
   });
+
+  // Award XP for taking breaks
+  focusService.onBreakStart(async () => {
+    await companionService.awardXP(25, 'breakTaken');
+  });
+
+  // Show level-up notifications
+  companionService.onLevelUp(async (newLevel) => {
+    const companionState = companionService.getState();
+    const action = await vscode.window.showInformationMessage(
+      `🎉 Level Up! Your ${companionState.type} is now Level ${newLevel}!`,
+      'View Stats'
+    );
+
+    if (action === 'View Stats') {
+      // TODO: Open companion stats panel
+      vscode.commands.executeCommand('cmdify.focus.showPanel');
+    }
+  });
+
+  // Show unlock notifications
+  companionService.onUnlock(async ({ type, item }) => {
+    if (type === 'companion') {
+      const unlock = await vscode.window.showInformationMessage(
+        `🐾 New Companion Unlocked: ${item.charAt(0).toUpperCase() + item.slice(1)}!`,
+        'Switch Now',
+        'Later'
+      );
+
+      if (unlock === 'Switch Now') {
+        await companionService.setCompanionType(item as any);
+      }
+    } else {
+      vscode.window.showInformationMessage(
+        `✨ New Accessory Unlocked: ${item}!`
+      );
+    }
+  });
+
+  // Track night owl usage for owl companion unlock
+  companionService.trackNightOwlUsage();
 
   // Register commands
   const commands = [
@@ -380,13 +424,13 @@ function updateFocusStatusBar(): void {
 
   const icons = COMPANION_ICONS[companionState.type];
   const icon = icons[focusState.status] || icons.idle;
-  
+
   let text = icon;
-  
+
   if (focusState.status === 'focusing' || focusState.status === 'break' || focusState.status === 'paused') {
     text += ` ${formatTime(focusState.timeRemaining)}`;
   }
-  
+
   if (stats.currentStreak > 0) {
     text += ` $(flame)${stats.currentStreak}`;
   }
@@ -401,7 +445,7 @@ function updateFocusStatusBar(): void {
 function updateTodoStatusBar(): void {
   const openCount = todoScannerService.getOpenCount();
   const dueCount = todoScannerService.getDueCount();
-  
+
   if (openCount === 0) {
     todoStatusBarItem.text = '$(checklist) 0';
     todoStatusBarItem.tooltip = 'No TODOs found - Click to scan workspace';
@@ -424,7 +468,7 @@ function updateActivityStatusBar(): void {
 
   const text = activityService.getStatusBarText();
   const tooltip = activityService.getStatusBarTooltip();
-  
+
   activityStatusBarItem.text = `$(clock) ${text}`;
   activityStatusBarItem.tooltip = tooltip;
 }
@@ -435,7 +479,7 @@ function updateActivityStatusBar(): void {
 function getFocusTooltip(status: string, todaySessions: number): string {
   let tooltip = 'Focus Timer - Click to open panel\n';
   tooltip += `${todaySessions} sessions today\n`;
-  
+
   switch (status) {
     case 'focusing':
       tooltip += 'Currently focusing...';
@@ -449,7 +493,7 @@ function getFocusTooltip(status: string, todaySessions: number): string {
     default:
       tooltip += 'Ready to focus';
   }
-  
+
   return tooltip;
 }
 

@@ -17,8 +17,6 @@ import {
 } from '../models/activity';
 import {
   getTodayString,
-  isToday,
-  isYesterday,
   formatDateString,
 } from '../utils/dateUtils';
 

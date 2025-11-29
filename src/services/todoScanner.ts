@@ -39,6 +39,9 @@ export class TodoScannerService implements vscode.Disposable {
   private readonly _onScanCompleted = new vscode.EventEmitter<number>();
   readonly onScanCompleted = this._onScanCompleted.event;
 
+  private readonly _onTodoCompleted = new vscode.EventEmitter<number>();
+  readonly onTodoCompleted = this._onTodoCompleted.event;
+
   constructor(private readonly context: vscode.ExtensionContext) {
     this.config = this.loadConfig();
     this.loadStoredMeta();
@@ -134,7 +137,7 @@ export class TodoScannerService implements vscode.Disposable {
    */
   private shouldScanFile(uri: vscode.Uri): boolean {
     const relativePath = vscode.workspace.asRelativePath(uri);
-    
+
     // Check exclude patterns first
     for (const pattern of this.config.excludePatterns) {
       if (this.matchGlob(relativePath, pattern)) {
@@ -162,7 +165,7 @@ export class TodoScannerService implements vscode.Disposable {
       .replace(/\*\*/g, '.*')
       .replace(/\*/g, '[^/]*')
       .replace(/\?/g, '.');
-    
+
     try {
       const regex = new RegExp(`^${regexStr}$`, 'i');
       return regex.test(path);
@@ -190,7 +193,7 @@ export class TodoScannerService implements vscode.Disposable {
 
     try {
       const files = await vscode.workspace.findFiles(includePattern, excludePattern, 1000);
-      
+
       // Scan files in parallel (but limit concurrency)
       const batchSize = 20;
       for (let i = 0; i < files.length; i += batchSize) {
@@ -342,7 +345,7 @@ export class TodoScannerService implements vscode.Disposable {
   getOverdueTodos(): DetectedTodo[] {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    
+
     return this.getTodos().filter(todo => {
       if (!todo.dueDate || todo.status !== 'open') {
         return false;
@@ -427,6 +430,9 @@ export class TodoScannerService implements vscode.Disposable {
 
       await this.saveStoredMeta();
       this._onTodosChanged.fire(this.getTodos());
+
+      // Fire completion event with total completed count
+      this._onTodoCompleted.fire(this.getCompletedTodos().length);
     }
   }
 
@@ -494,5 +500,6 @@ export class TodoScannerService implements vscode.Disposable {
     this._onTodosChanged.dispose();
     this._onScanStarted.dispose();
     this._onScanCompleted.dispose();
+    this._onTodoCompleted.dispose();
   }
 }

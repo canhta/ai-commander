@@ -31,7 +31,10 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
     this.disposables.push(
       focusService.onTick(() => this.updateWebview()),
       focusService.onStateChange(() => this.updateWebview()),
-      companionService.onStateChange(() => this.updateWebview())
+      companionService.onStateChange(() => this.updateWebview()),
+      // Update on XP gain and level up for immediate feedback
+      companionService.onXPGain(() => this.updateWebview()),
+      companionService.onLevelUp(() => this.updateWebview())
     );
   }
 
@@ -85,6 +88,7 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
       const companionState = this.companionService.getState();
       const stats = this.focusService.getStats();
       const svgState = this.companionService.getSvgState();
+      const xpProgress = this.companionService.getXPProgress();
 
       this.view.webview.postMessage({
         type: "update",
@@ -93,17 +97,33 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
         svgState,
         streak: stats.currentStreak,
         timeFormatted: formatTime(focusState.timeRemaining),
+        // Progression data
+        level: companionState.level,
+        experience: companionState.experience,
+        xpProgress,
       });
     }
   }
 
   private async showCompanionPicker(): Promise<void> {
-    const current = this.companionService.getState().type;
-    const items = ALL_COMPANIONS.map((type) => ({
-      label: `${type === current ? "✓ " : ""}${COMPANION_NAMES[type]}`,
-      value: type,
-      picked: type === current,
-    }));
+    const currentState = this.companionService.getState();
+    const unlocked = this.companionService.getUnlockedCompanions();
+    const locked = this.companionService.getLockedCompanions();
+
+    const items = [
+      ...unlocked.map((type) => ({
+        label: `${type === currentState.type ? "✓ " : ""}${COMPANION_NAMES[type]}`,
+        description: type === currentState.type ? "Current" : "Unlocked",
+        value: type,
+        picked: type === currentState.type,
+      })),
+      ...locked.map((item) => ({
+        label: `🔒 ${item.name}`,
+        description: item.condition,
+        value: item.type,
+        picked: false,
+      })),
+    ];
 
     const selected = await vscode.window.showQuickPick(items, {
       title: "Choose Companion",
@@ -111,6 +131,14 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
     });
 
     if (selected) {
+      // Check if locked
+      if (!unlocked.includes(selected.value)) {
+        vscode.window.showWarningMessage(
+          `${COMPANION_NAMES[selected.value]} is locked. ${locked.find(l => l.type === selected.value)?.condition}`
+        );
+        return;
+      }
+
       await this.companionService.setCompanionType(selected.value);
     }
   }
@@ -261,9 +289,57 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.6; transform: scale(0.9); }
     }
+    
+    /* Progression styles */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .companion-name {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .level-badge {
+      font-size: 10px;
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 500;
+    }
+    .xp-bar {
+      height: 4px;
+      background: var(--vscode-progressBar-background);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .xp-fill {
+      height: 100%;
+      background: var(--vscode-charts-purple);
+      transition: width 0.3s ease;
+    }
+    .xp-label {
+      font-size: 9px;
+      color: var(--vscode-descriptionForeground);
+      margin-bottom: 8px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
+  <div class="header">
+    <span class="companion-name" id="companionName">Robot</span>
+    <span class="level-badge" id="levelBadge">Level 1</span>
+  </div>
+  <div class="xp-bar">
+    <div class="xp-fill" id="xpFill" style="width: 0%"></div>
+  </div>
+  <div class="xp-label" id="xpLabel">0 / 100 XP</div>
+  
   <div class="timer-row">
     <img class="companion" id="companion" 
          src="${svgUris[companionState.type][svgState]}" 
@@ -271,11 +347,10 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
     
     <div class="timer-info">
       <div class="timer-display ${focusState.status}" id="timer">
-        ${
-          focusState.status === "idle"
-            ? "--:--"
-            : formatTime(focusState.timeRemaining)
-        }
+        ${focusState.status === "idle"
+        ? "--:--"
+        : formatTime(focusState.timeRemaining)
+      }
       </div>
       <div class="status ${focusState.status}" id="status">
         ${this.getStatusText(focusState.status)}
@@ -316,8 +391,15 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
       const msg = e.data;
       if (msg.type !== 'update') return;
       
-      const { focusState, companionType, svgState, streak, timeFormatted } = msg;
+      const { focusState, companionType, svgState, streak, timeFormatted, level, experience, xpProgress } = msg;
       
+      // Update progression
+      document.getElementById('companionName').textContent = companionType.charAt(0).toUpperCase() + companionType.slice(1);
+      document.getElementById('levelBadge').textContent = 'Level ' + level;
+      document.getElementById('xpFill').style.width = xpProgress.percentage + '%';
+      document.getElementById('xpLabel').textContent = xpProgress.current + ' / ' + xpProgress.needed + ' XP';
+      
+      // Update timer and companion
       document.getElementById('timer').textContent = focusState.status === 'idle' ? '--:--' : timeFormatted;
       document.getElementById('timer').className = 'timer-display ' + focusState.status;
       document.getElementById('status').textContent = getStatus(focusState.status);
@@ -368,7 +450,7 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
   private getStatusText(status: string): string {
     return (
       { focusing: "Focusing", break: "Break", paused: "Paused", idle: "Ready" }[
-        status
+      status
       ] || "Ready"
     );
   }

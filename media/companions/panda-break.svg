@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .body { animation: relaxed 3s ease-in-out infinite; }
+    .zzz { animation: float 2s ease-in-out infinite; }
+    .bamboo { animation: munch 1s ease-in-out infinite; }
+    
+    @keyframes relaxed {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(2deg); }
+    }
+    @keyframes float {
+      0%, 100% { opacity: 0.5; transform: translateY(0); }
+      50% { opacity: 1; transform: translateY(-4px); }
+    }
+    @keyframes munch {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(5deg); }
+    }
+  </style>
+  
+  <g class="body" style="transform-origin: 32px 32px">
+    <!-- Ears -->
+    <rect x="8" y="6" width="10" height="10" fill="#2d2d2d"/>
+    <rect x="44" y="6" width="10" height="10" fill="#2d2d2d"/>
+    
+    <!-- Head -->
+    <rect x="12" y="12" width="38" height="26" fill="#ffffff"/>
+    <rect x="10" y="16" width="4" height="18" fill="#ffffff"/>
+    <rect x="48" y="16" width="4" height="18" fill="#ffffff"/>
+    
+    <!-- Eye patches -->
+    <rect x="14" y="16" width="12" height="12" fill="#2d2d2d"/>
+    <rect x="36" y="16" width="12" height="12" fill="#2d2d2d"/>
+    
+    <!-- Happy closed eyes -->
+    <rect x="17" y="22" width="6" height="2" fill="#ffffff"/>
+    <rect x="39" y="22" width="6" height="2" fill="#ffffff"/>
+    
+    <!-- Blush -->
+    <rect x="12" y="26" width="4" height="2" fill="#ffb4b4"/>
+    <rect x="46" y="26" width="4" height="2" fill="#ffb4b4"/>
+    
+    <!-- Nose -->
+    <rect x="28" y="28" width="6" height="4" fill="#2d2d2d"/>
+    
+    <!-- Happy munching mouth -->
+    <rect x="28" y="33" width="8" height="4" fill="#2d2d2d"/>
+    <rect x="30" y="34" width="4" height="2" fill="#ff6b6b"/>
+    
+    <!-- Body -->
+    <rect x="14" y="38" width="34" height="16" fill="#ffffff"/>
+    <rect x="24" y="42" width="14" height="10" fill="#e0e0e0"/>
+    
+    <!-- Arm holding bamboo -->
+    <rect x="6" y="38" width="8" height="14" fill="#2d2d2d"/>
+    
+    <!-- Bamboo -->
+    <g class="bamboo" style="transform-origin: 4px 34px">
+      <rect x="2" y="24" width="6" height="20" fill="#4ade80"/>
+      <rect x="3" y="24" width="2" height="20" fill="#22c55e"/>
+      <rect x="2" y="28" width="6" height="2" fill="#166534"/>
+      <rect x="2" y="36" width="6" height="2" fill="#166534"/>
+      <!-- Leaf -->
+      <rect x="6" y="22" width="6" height="4" fill="#4ade80"/>
+      <rect x="10" y="20" width="4" height="4" fill="#22c55e"/>
+    </g>
+    
+    <!-- Relaxed arm -->
+    <rect x="48" y="40" width="8" height="12" fill="#2d2d2d"/>
+    
+    <!-- Legs spread relaxed -->
+    <rect x="14" y="52" width="12" height="6" fill="#2d2d2d"/>
+    <rect x="36" y="52" width="12" height="6" fill="#2d2d2d"/>
+    
+    <!-- Paw pads -->
+    <rect x="16" y="56" width="2" height="2" fill="#ffb4b4"/>
+    <rect x="22" y="56" width="2" height="2" fill="#ffb4b4"/>
+    <rect x="38" y="56" width="2" height="2" fill="#ffb4b4"/>
+    <rect x="44" y="56" width="2" height="2" fill="#ffb4b4"/>
+  </g>
+  
+  <!-- Z's for relaxation -->
+  <g class="zzz">
+    <rect x="50" y="8" width="4" height="2" fill="#60a5fa"/>
+    <rect x="52" y="6" width="2" height="2" fill="#60a5fa"/>
+    <rect x="50" y="4" width="4" height="2" fill="#60a5fa"/>
+  </g>
+  <g class="zzz" style="animation-delay: 0.5s">
+    <rect x="56" y="4" width="3" height="2" fill="#60a5fa"/>
+    <rect x="57" y="2" width="2" height="2" fill="#60a5fa"/>
+    <rect x="56" y="0" width="3" height="2" fill="#60a5fa"/>
+  </g>
+</svg>
