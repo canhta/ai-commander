@@ -20,6 +20,8 @@ import { disposeTerminal } from './utils/shell';
 import { FocusService } from './services/focus';
 import { CompanionService } from './services/companion';
 import { CompanionPanelProvider } from './views/companionPanel';
+import { ActivityService } from './services/activity';
+import { ActivityPanelProvider } from './views/activityPanel';
 import { formatTime } from './utils/dateUtils';
 import { COMPANION_ICONS } from './models/companion';
 import { TodoScannerService } from './services/todoScanner';
@@ -39,6 +41,9 @@ let todoScannerService: TodoScannerService;
 let todoSyncService: TodoSyncService;
 let reminderService: ReminderService;
 let todoStatusBarItem: vscode.StatusBarItem;
+let activityService: ActivityService;
+let activityStatusBarItem: vscode.StatusBarItem;
+let activityPanelProvider: ActivityPanelProvider;
 
 /**
  * Update the noCommands context for welcome view
@@ -158,6 +163,31 @@ export async function activate(context: vscode.ExtensionContext) {
   setTimeout(() => {
     todoScannerService.scanWorkspace();
   }, 2000);
+
+  // Initialize Activity Tracking service
+  activityService = new ActivityService(context);
+  activityPanelProvider = new ActivityPanelProvider(context.extensionUri, activityService);
+
+  // Initialize Activity status bar (between focus and TODO)
+  const activityConfig = activityService.getConfig();
+  if (activityConfig.showInStatusBar) {
+    activityStatusBarItem = vscode.window.createStatusBarItem(
+      vscode.StatusBarAlignment.Right,
+      99.5 // Between focus (100) and TODO (99)
+    );
+    activityStatusBarItem.command = 'cmdify.activity.showDashboard';
+    updateActivityStatusBar();
+    activityStatusBarItem.show();
+
+    // Listen for activity updates
+    activityService.onActivityUpdate(() => updateActivityStatusBar());
+  }
+
+  // Connect focus session completion to activity tracking
+  focusService.onSessionComplete(async () => {
+    const focusConfig = focusService.getConfig();
+    await activityService.recordFocusSession(focusConfig.focusDuration);
+  });
 
   // Register commands
   const commands = [
@@ -300,6 +330,10 @@ export async function activate(context: vscode.ExtensionContext) {
         }
       }
     }),
+    // Activity Dashboard command
+    vscode.commands.registerCommand('cmdify.activity.showDashboard', () => {
+      activityPanelProvider.show();
+    }),
   ];
 
   // Listen for configuration changes
@@ -325,8 +359,15 @@ export async function activate(context: vscode.ExtensionContext) {
     todoTreeView,
     todoTreeProvider,
     todoStatusBarItem,
+    activityService,
+    activityPanelProvider,
     ...commands
   );
+
+  // Add activity status bar to subscriptions if created
+  if (activityStatusBarItem) {
+    context.subscriptions.push(activityStatusBarItem);
+  }
 }
 
 /**
@@ -371,6 +412,21 @@ function updateTodoStatusBar(): void {
     todoStatusBarItem.text = `$(checklist) ${openCount}`;
     todoStatusBarItem.tooltip = `${openCount} TODOs - Click to scan workspace`;
   }
+}
+
+/**
+ * Update the activity status bar
+ */
+function updateActivityStatusBar(): void {
+  if (!activityStatusBarItem) {
+    return;
+  }
+
+  const text = activityService.getStatusBarText();
+  const tooltip = activityService.getStatusBarTooltip();
+  
+  activityStatusBarItem.text = `$(clock) ${text}`;
+  activityStatusBarItem.tooltip = tooltip;
 }
 
 /**
@@ -702,6 +758,12 @@ export function deactivate() {
   }
   if (reminderService) {
     reminderService.dispose();
+  }
+  if (activityService) {
+    activityService.dispose();
+  }
+  if (activityPanelProvider) {
+    activityPanelProvider.dispose();
   }
 }
 
