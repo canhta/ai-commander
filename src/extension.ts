@@ -27,7 +27,9 @@ import { COMPANION_ICONS } from './models/companion';
 import { TodoScannerService } from './services/todoScanner';
 import { TodoSyncService } from './services/todoSync';
 import { ReminderService } from './services/reminder';
+import { AchievementService } from './services/achievement';
 import { createTodoTreeView, TodoTreeItem } from './views/todoTreeProvider';
+import { AchievementPanelProvider } from './views/achievementPanel';
 import { DetectedTodo, GlobalReminder } from './models/todo';
 
 let storage: StorageService;
@@ -44,6 +46,8 @@ let todoStatusBarItem: vscode.StatusBarItem;
 let activityService: ActivityService;
 let activityStatusBarItem: vscode.StatusBarItem;
 let activityPanelProvider: ActivityPanelProvider;
+let achievementService: AchievementService;
+let achievementPanelProvider: AchievementPanelProvider;
 
 /**
  * Update the noCommands context for welcome view
@@ -168,6 +172,16 @@ export async function activate(context: vscode.ExtensionContext) {
   activityService = new ActivityService(context);
   activityPanelProvider = new ActivityPanelProvider(context.extensionUri, activityService);
 
+  // Initialize Achievement System
+  achievementService = new AchievementService(context, companionService, activityService);
+  achievementPanelProvider = new AchievementPanelProvider(context.extensionUri, achievementService);
+
+  // Track command creation for achievements
+  storage.onDidChange(async () => {
+    const commandCount = storage.getAll().length;
+    await achievementService.checkCommandAchievements(commandCount);
+  });
+
   // Initialize Activity status bar (between focus and TODO)
   const activityConfig = activityService.getConfig();
   if (activityConfig.showInStatusBar) {
@@ -190,6 +204,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Award XP for completing focus session
     await companionService.awardXP(100, 'focusSessionComplete');
+
+    // Check focus achievements
+    const stats = activityService.getStats();
+    await achievementService.checkFocusAchievements(stats.totalSessions);
+    
+    // Check marathon achievement (5 sessions in a day)
+    const today = activityService.getToday();
+    if (today) {
+      await achievementService.trackDailySessions(today.focusSessions);
+    }
   });
 
   // Award XP for taking breaks
@@ -333,6 +357,11 @@ export async function activate(context: vscode.ExtensionContext) {
       if (todo && 'id' in todo && todo.id) {
         await todoScannerService.markComplete(todo.id);
         vscode.window.showInformationMessage('✅ TODO marked as complete');
+        
+        // Track TODO completion for achievements
+        const completedCount = todoScannerService.getCompletedTodos().length;
+        await achievementService.checkTodoAchievements(completedCount);
+        await companionService.awardXP(50, 'todoComplete');
       }
     }),
     vscode.commands.registerCommand('cmdify.todo.markDone', async (item: TodoTreeItem | DetectedTodo) => {
@@ -378,6 +407,10 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('cmdify.activity.showDashboard', () => {
       activityPanelProvider.show();
     }),
+    // Achievement System commands
+    vscode.commands.registerCommand('cmdify.showAchievements', () => {
+      achievementPanelProvider.show();
+    }),
   ];
 
   // Listen for configuration changes
@@ -405,6 +438,8 @@ export async function activate(context: vscode.ExtensionContext) {
     todoStatusBarItem,
     activityService,
     activityPanelProvider,
+    achievementService,
+    achievementPanelProvider,
     ...commands
   );
 

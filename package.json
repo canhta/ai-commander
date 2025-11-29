@@ -286,6 +286,12 @@
         "title": "Show Activity Dashboard",
         "icon": "$(graph)",
         "category": "Cmdify"
+      },
+      {
+        "command": "cmdify.showAchievements",
+        "title": "Show Achievements",
+        "icon": "$(trophy)",
+        "category": "Cmdify"
       }
     ],
     "keybindings": [
