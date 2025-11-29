@@ -58,6 +58,7 @@ let reminderService: ReminderService;
 let todoStatusBarItem: vscode.StatusBarItem;
 let activityService: ActivityService;
 let activityStatusBarItem: vscode.StatusBarItem;
+let sponsorStatusBarItem: vscode.StatusBarItem;
 let activityPanelProvider: ActivityPanelProvider;
 let achievementService: AchievementService;
 let achievementPanelProvider: AchievementPanelProvider;
@@ -239,6 +240,16 @@ function initializeStatusBars(): void {
   todoStatusBarItem.command = "cmdify.todos.scan";
   updateTodoStatusBar();
   todoStatusBarItem.show();
+
+  // Sponsor Status Bar (leftmost, low priority)
+  sponsorStatusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    50
+  );
+  sponsorStatusBarItem.text = "$(heart)";
+  sponsorStatusBarItem.tooltip = "Support Cmdify on Ko-fi";
+  sponsorStatusBarItem.command = "cmdify.sponsor";
+  sponsorStatusBarItem.show();
 }
 
 function initializeGamificationServices(
@@ -1180,6 +1191,7 @@ function addDisposables(context: vscode.ExtensionContext): void {
     todoSyncService,
     reminderService,
     todoStatusBarItem,
+    sponsorStatusBarItem,
     activityService,
     activityPanelProvider,
     achievementService,

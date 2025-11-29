@@ -78,19 +78,19 @@
       },
       {
         "view": "cmdify.commands",
-        "contents": "No commands yet.\n[Create Command](command:cmdify.create)\n\nDescribe what you want to do and let AI generate the command for you.\n\n[❤️ Support on Ko-fi](command:cmdify.sponsor)",
+        "contents": "No commands yet.\n\n[$(add) New Command](command:cmdify.create)\n\nDescribe what you want to do and let AI generate the command for you.\n\n[$(heart) Support on Ko-fi](command:cmdify.sponsor)",
         "when": "cmdify.noCommands && !cmdify.aiNotConfigured"
       },
       {
         "view": "cmdify.todos",
-        "contents": "No TODOs found in workspace.\n\n[$(refresh) Scan Workspace](command:cmdify.todos.scan)\n\nTip: Add TODO, FIXME, HACK, or BUG comments in your code to track them here."
+        "contents": "No TODOs found in workspace.\n\n[$(search) Scan Workspace](command:cmdify.todos.scan)\n\nTip: Add TODO, FIXME, HACK, or BUG comments in your code to track them here."
       }
     ],
     "commands": [
       {
         "command": "cmdify.create",
-        "title": "Create Command",
-        "icon": "$(sparkle)",
+        "title": "New Command",
+        "icon": "$(add)",
         "category": "Cmdify"
       },
       {
@@ -132,18 +132,19 @@
       {
         "command": "cmdify.export",
         "title": "Export Commands",
-        "icon": "$(export)",
+        "icon": "$(arrow-up)",
         "category": "Cmdify"
       },
       {
         "command": "cmdify.import",
         "title": "Import Commands",
-        "icon": "$(import)",
+        "icon": "$(arrow-down)",
         "category": "Cmdify"
       },
       {
         "command": "cmdify.login",
         "title": "GitHub Login",
+        "icon": "$(github)",
         "category": "Cmdify"
       },
       {
@@ -155,6 +156,7 @@
       {
         "command": "cmdify.configureAI",
         "title": "Configure AI Provider",
+        "icon": "$(key)",
         "category": "Cmdify"
       },
       {
@@ -186,7 +188,7 @@
       },
       {
         "command": "cmdify.sponsor",
-        "title": "Support on Ko-fi ❤️",
+        "title": "Support on Ko-fi",
         "icon": "$(heart)",
         "category": "Cmdify"
       },
@@ -199,49 +201,43 @@
       {
         "command": "cmdify.focus.start",
         "title": "Start Focus Session",
-        "icon": "$(play)",
+        "icon": "$(play-circle)",
         "category": "Cmdify Focus"
       },
       {
         "command": "cmdify.focus.pause",
         "title": "Pause Focus Session",
-        "icon": "$(debug-pause)",
+        "icon": "$(primitive-square)",
         "category": "Cmdify Focus"
       },
       {
         "command": "cmdify.focus.resume",
         "title": "Resume Focus Session",
-        "icon": "$(play)",
+        "icon": "$(play-circle)",
         "category": "Cmdify Focus"
       },
       {
         "command": "cmdify.focus.stop",
         "title": "Stop Focus Session",
-        "icon": "$(debug-stop)",
+        "icon": "$(close)",
         "category": "Cmdify Focus"
       },
       {
         "command": "cmdify.focus.skip",
         "title": "Skip to Next Phase",
-        "icon": "$(debug-step-over)",
+        "icon": "$(arrow-right)",
         "category": "Cmdify Focus"
       },
       {
         "command": "cmdify.focus.showPanel",
         "title": "Show Focus Companion",
-        "icon": "$(smiley)",
+        "icon": "$(flame)",
         "category": "Cmdify Focus"
       },
       {
         "command": "cmdify.todos.scan",
         "title": "Scan Workspace for TODOs",
-        "icon": "$(refresh)",
-        "category": "Cmdify TODOs"
-      },
-      {
-        "command": "cmdify.todos.refresh",
-        "title": "Refresh TODOs",
-        "icon": "$(refresh)",
+        "icon": "$(search)",
         "category": "Cmdify TODOs"
       },
       {
@@ -276,8 +272,8 @@
       },
       {
         "command": "cmdify.reminder.add",
-        "title": "Add Reminder",
-        "icon": "$(bell-dot)",
+        "title": "New Reminder",
+        "icon": "$(add)",
         "category": "Cmdify TODOs"
       },
       {
@@ -307,12 +303,13 @@
       {
         "command": "cmdify.showOnboarding",
         "title": "Show Welcome Guide",
-        "icon": "$(info)",
+        "icon": "$(book)",
         "category": "Cmdify"
       },
       {
         "command": "cmdify.resetOnboarding",
         "title": "Reset Onboarding (Debug)",
+        "icon": "$(debug-restart)",
         "category": "Cmdify"
       },
       {
@@ -355,29 +352,29 @@
           "group": "navigation@1"
         },
         {
+          "command": "cmdify.search",
+          "when": "view == cmdify.commands",
+          "group": "1_actions@1"
+        },
+        {
           "command": "cmdify.refresh",
           "when": "view == cmdify.commands",
-          "group": "navigation@2"
+          "group": "1_actions@2"
+        },
+        {
+          "command": "cmdify.export",
+          "when": "view == cmdify.commands",
+          "group": "2_data@1"
+        },
+        {
+          "command": "cmdify.import",
+          "when": "view == cmdify.commands",
+          "group": "2_data@2"
         },
         {
           "command": "cmdify.sync",
           "when": "view == cmdify.commands",
-          "group": "1_sync"
-        },
-        {
-          "command": "cmdify.settings",
-          "when": "view == cmdify.commands",
-          "group": "1_sync"
-        },
-        {
-          "command": "cmdify.about",
-          "when": "view == cmdify.commands",
-          "group": "2_sponsor"
-        },
-        {
-          "command": "cmdify.sponsor",
-          "when": "view == cmdify.commands",
-          "group": "2_sponsor"
+          "group": "2_data@3"
         },
         {
           "command": "cmdify.todos.scan",
@@ -412,14 +409,14 @@
           "group": "1_actions@1"
         },
         {
-          "command": "cmdify.delete",
+          "command": "cmdify.copy",
           "when": "view == cmdify.commands && viewItem =~ /command.*/",
           "group": "1_actions@2"
         },
         {
-          "command": "cmdify.toggleFavoriteFromTree",
+          "command": "cmdify.delete",
           "when": "view == cmdify.commands && viewItem =~ /command.*/",
-          "group": "1_actions@3"
+          "group": "2_danger@1"
         },
         {
           "command": "cmdify.todo.goToCode",
@@ -855,7 +852,7 @@
           {
             "id": "cmdify.welcome.createCommand",
             "title": "Create Your First Command",
-            "description": "Save frequently used commands for quick access. Just describe what you need!\n\n[Create Command](command:cmdify.create)",
+            "description": "Save frequently used commands for quick access. Just describe what you need!\n\n[$(add) New Command](command:cmdify.create)",
             "media": {
               "markdown": "docs/walkthrough/create-command.md"
             },

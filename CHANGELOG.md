@@ -5,6 +5,42 @@ All notable changes to Cmdify will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] - 2025-11-29
+
+### Added
+
+- Achievement System with gamification features
+  - Unlock achievements for focus sessions, streaks, todos, and commands
+  - XP rewards and progress tracking
+  - Secret achievements to discover
+  - Achievement panel with category breakdown
+- Activity Dashboard for productivity insights
+  - Daily coding time tracking
+  - Language breakdown visualization
+  - Weekly activity chart
+  - Streak and session statistics
+- Companion Evolution 2.0
+  - New unlockable companions (fox, owl, panda, star)
+  - Companion levels and experience points
+  - Mood system based on user activity
+  - Accessories and customization options
+- Interactive onboarding flow for new users
+
+### Changed
+
+- **Icon System Refactor**: Replaced inconsistent emoji usage with professional Lucide SVG icons
+  - Webview panels now use Lucide icons for consistent styling
+  - Tree views use VS Code ThemeIcons for native integration
+  - Status bar uses codicon syntax for proper rendering
+  - Centralized icon management in `src/utils/icons.ts` and `src/utils/lucide.ts`
+- Improved panel styling with better visual hierarchy
+- Enhanced notification messages with codicons
+
+### Fixed
+
+- Fixed icon rendering issues in webview panels
+- Resolved inconsistent icon appearance across different VS Code themes
+
 ## [0.0.6] - 2025-11-28
 
 ### Added
