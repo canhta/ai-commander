@@ -41,6 +41,9 @@ const DEFAULT_DATA: AchievementData = {
 export class AchievementService implements vscode.Disposable {
   private data: AchievementData;
   private disposables: vscode.Disposable[] = [];
+  
+  // Track near-completion notifications to avoid spam
+  private notifiedNearCompletion: Set<string> = new Set();
 
   // Event emitters
   private readonly _onAchievementUnlocked = new vscode.EventEmitter<Achievement>();
@@ -413,6 +416,38 @@ export class AchievementService implements vscode.Disposable {
     return progress;
   }
 
+  // =============================================================================
+  // "Almost There" Notifications (Phase 4)
+  // =============================================================================
+
+  /**
+   * Check for near-completion achievements and notify (90%+ progress)
+   */
+  async checkNearCompletionNotifications(): Promise<void> {
+    const config = vscode.workspace.getConfiguration('cmdify.achievements');
+    if (!config.get<boolean>('notifyNearCompletion', true)) {return;}
+    
+    const progress = this.getProgress();
+    
+    for (const p of progress) {
+      if (p.percentage >= 90 && !this.notifiedNearCompletion.has(p.achievementId)) {
+        const achievement = getAchievementById(p.achievementId);
+        if (!achievement || achievement.secret) {continue;}
+        
+        this.notifiedNearCompletion.add(p.achievementId);
+        
+        const action = await vscode.window.showInformationMessage(
+          `🏆 Almost there! "${achievement.name}" - ${p.currentValue}/${p.targetValue}`,
+          'View Achievements'
+        );
+        
+        if (action === 'View Achievements') {
+          vscode.commands.executeCommand('cmdify.showAchievements');
+        }
+      }
+    }
+  }
+
   /**
    * Get achievement statistics
    */
@@ -470,6 +505,19 @@ export class AchievementService implements vscode.Disposable {
     
     const companionState = this.companionService.getState();
     await this.checkLevelAchievements(companionState.level);
+  }
+
+  // =============================================================================
+  // Reset (Phase 4)
+  // =============================================================================
+
+  /**
+   * Reset all achievement progress
+   */
+  async reset(): Promise<void> {
+    this.data = { ...DEFAULT_DATA };
+    this.notifiedNearCompletion.clear();
+    await this.saveData();
   }
 
   dispose(): void {

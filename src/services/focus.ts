@@ -13,6 +13,7 @@ import {
   DEFAULT_FOCUS_STATE,
   DEFAULT_FOCUS_STATS,
 } from '../models/focus';
+import { getBreakSuggestion } from '../models/companion';
 import { getTodayString, isToday, isYesterday } from '../utils/dateUtils';
 
 const FOCUS_STATE_KEY = 'cmdify.focus.state';
@@ -154,6 +155,24 @@ export class FocusService implements vscode.Disposable {
     return { ...this.config };
   }
 
+  // Session-specific config (for session types)
+  private currentSessionConfig: FocusConfig | null = null;
+
+  /**
+   * Get effective config for current session
+   */
+  private getEffectiveConfig(): FocusConfig {
+    return this.currentSessionConfig || this.config;
+  }
+
+  /**
+   * Start a focus session with optional custom config (Phase 4: Session Types)
+   */
+  async startWithConfig(customConfig: Partial<FocusConfig>): Promise<void> {
+    this.currentSessionConfig = { ...this.config, ...customConfig };
+    await this.start();
+  }
+
   /**
    * Start a focus session
    */
@@ -161,6 +180,8 @@ export class FocusService implements vscode.Disposable {
     if (this.state.status === 'focusing' || this.state.status === 'break') {
       return; // Already running
     }
+
+    const effectiveConfig = this.getEffectiveConfig();
 
     // Resume from paused state
     if (this.state.status === 'paused' && this.state.pausedAt) {
@@ -170,7 +191,7 @@ export class FocusService implements vscode.Disposable {
     } else {
       // Start new focus session
       this.state.status = 'focusing';
-      this.state.timeRemaining = this.config.focusDuration * 60;
+      this.state.timeRemaining = effectiveConfig.focusDuration * 60;
       this.sessionStartTime = new Date();
     }
 
@@ -214,6 +235,7 @@ export class FocusService implements vscode.Disposable {
     delete this.state.pausedAt;
     delete this.state.wasBreak;
     this.sessionStartTime = null;
+    this.currentSessionConfig = null; // Reset session config
     await this.saveState();
   }
 
@@ -326,10 +348,11 @@ export class FocusService implements vscode.Disposable {
       'Skip Break'
     );
 
-    if (action === 'Take Break' || this.config.autoStartBreak) {
+    if (action === 'Take Break' || this.getEffectiveConfig().autoStartBreak) {
       await this.startBreak();
     } else {
       this.state.status = 'idle';
+      this.currentSessionConfig = null; // Reset session config
       await this.saveState();
     }
   }
@@ -338,10 +361,11 @@ export class FocusService implements vscode.Disposable {
    * Start a break
    */
   private async startBreak(): Promise<void> {
-    const isLongBreak = this.state.currentSession >= this.config.sessionsBeforeLongBreak;
+    const effectiveConfig = this.getEffectiveConfig();
+    const isLongBreak = this.state.currentSession >= effectiveConfig.sessionsBeforeLongBreak;
     const breakDuration = isLongBreak
-      ? this.config.longBreakDuration
-      : this.config.shortBreakDuration;
+      ? effectiveConfig.longBreakDuration
+      : effectiveConfig.shortBreakDuration;
 
     this.state.status = 'break';
     this.state.timeRemaining = breakDuration * 60;
@@ -356,8 +380,10 @@ export class FocusService implements vscode.Disposable {
     this._onBreakStart.fire();
     this.startTimer();
 
+    // Show break notification with suggestion (Phase 4)
+    const suggestion = getBreakSuggestion(breakDuration);
     vscode.window.showInformationMessage(
-      `☕ Time for a ${isLongBreak ? 'long' : 'short'} break! (${breakDuration} minutes)`
+      `☕ Time for a ${isLongBreak ? 'long' : 'short'} break! (${breakDuration} min)\n${suggestion}`
     );
   }
 
@@ -366,6 +392,7 @@ export class FocusService implements vscode.Disposable {
    */
   private async completeBreak(): Promise<void> {
     this.state.status = 'idle';
+    this.currentSessionConfig = null; // Reset session config
     await this.saveState();
     this._onBreakComplete.fire();
 

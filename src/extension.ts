@@ -30,7 +30,7 @@ import { CompanionPanelProvider } from "./views/companionPanel";
 import { ActivityService } from "./services/activity";
 import { ActivityPanelProvider } from "./views/activityPanel";
 import { formatTime } from "./utils/dateUtils";
-import { COMPANION_ICONS } from "./models/companion";
+import { COMPANION_ICONS, SESSION_TYPES, getBreakSuggestion } from "./models/companion";
 import { TodoScannerService } from "./services/todoScanner";
 import { TodoSyncService } from "./services/todoSync";
 import { ReminderService } from "./services/reminder";
@@ -285,13 +285,20 @@ function setupEventListeners(context: vscode.ExtensionContext): void {
   // Focus timer events
   context.subscriptions.push(
     focusService.onTick(() => updateFocusStatusBar()),
-    focusService.onStateChange(() => updateFocusStatusBar()),
+    focusService.onStateChange((state) => {
+      updateFocusStatusBar();
+      // Trigger companion messages on focus state changes
+      if (state.status === 'focusing') {
+        companionService.showMessage('focusStart');
+      }
+    }),
     companionService.onStateChange(() => updateFocusStatusBar())
   );
 
   // Focus session completion
   context.subscriptions.push(
     focusService.onSessionComplete(async () => {
+      companionService.showMessage('focusComplete');
       await handleFocusSessionComplete();
     })
   );
@@ -299,14 +306,25 @@ function setupEventListeners(context: vscode.ExtensionContext): void {
   // Break start
   context.subscriptions.push(
     focusService.onBreakStart(async () => {
+      companionService.showMessage('breakStart');
       await companionService.awardXP(25, "breakTaken");
     })
   );
 
   // Companion events
   context.subscriptions.push(
-    companionService.onLevelUp(handleLevelUp),
+    companionService.onLevelUp((level) => {
+      companionService.showMessage('levelUp', { level });
+      handleLevelUp(level);
+    }),
     companionService.onUnlock(handleUnlock)
+  );
+  
+  // Achievement unlocks trigger companion message
+  context.subscriptions.push(
+    achievementService.onAchievementUnlocked((achievement) => {
+      companionService.showMessage('achievementUnlock', { achievement: achievement.name });
+    })
   );
 
   // TODO changes
@@ -368,6 +386,9 @@ async function handleFocusSessionComplete(): Promise<void> {
     await companionService.awardXP(200, "dailyGoalReached");
     await activityService.markDailyGoalBonusAwarded();
   }
+  
+  // Phase 4: Check for near-completion achievements
+  await achievementService.checkNearCompletionNotifications();
 }
 
 async function handleLevelUp(newLevel: number): Promise<void> {
@@ -478,9 +499,48 @@ function registerCommands(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("cmdify.about", () => handleAbout()),
 
     // Focus Timer Commands
-    vscode.commands.registerCommand("cmdify.focus.start", () =>
-      focusService.start()
-    ),
+    vscode.commands.registerCommand("cmdify.focus.start", async () => {
+      const config = vscode.workspace.getConfiguration('cmdify.focus');
+      const showSessionPicker = config.get<boolean>('showSessionTypePicker', true);
+      
+      if (showSessionPicker) {
+        interface SessionPickItem extends vscode.QuickPickItem {
+          sessionType: typeof SESSION_TYPES[number] | null;
+        }
+        
+        const items: SessionPickItem[] = SESSION_TYPES.map(type => ({
+          label: `${type.icon} ${type.name}`,
+          description: `${type.focusMinutes}/${type.breakMinutes} min`,
+          detail: type.description,
+          sessionType: type
+        }));
+        
+        items.push({
+          label: '⚙️ Custom',
+          description: `${config.get('focusDuration')}/${config.get('shortBreakDuration')} min`,
+          detail: 'Use settings values',
+          sessionType: null
+        });
+        
+        const selected = await vscode.window.showQuickPick(items, {
+          placeHolder: 'Select session type',
+          title: 'Start Focus Session'
+        });
+        
+        if (!selected) {return;}
+        
+        if (selected.sessionType) {
+          await focusService.startWithConfig({
+            focusDuration: selected.sessionType.focusMinutes,
+            shortBreakDuration: selected.sessionType.breakMinutes
+          });
+        } else {
+          await focusService.start();
+        }
+      } else {
+        await focusService.start();
+      }
+    }),
     vscode.commands.registerCommand("cmdify.focus.pause", () =>
       focusService.pause()
     ),
@@ -531,6 +591,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
         const todo = (item as TodoTreeItem).todo ?? (item as DetectedTodo);
         if (todo && "id" in todo && todo.id) {
           await todoScannerService.markComplete(todo.id);
+          companionService.showMessage('todoComplete');
           vscode.window.showInformationMessage("✅ TODO marked as complete");
 
           const completedCount = todoScannerService.getCompletedTodos().length;
@@ -611,6 +672,100 @@ function registerCommands(context: vscode.ExtensionContext): void {
       await onboardingService.resetOnboarding();
       vscode.window.showInformationMessage("Onboarding reset. Reload to see the welcome screen.");
     }),
+
+    // =============================================================================
+    // Phase 4: Companion Personalization Commands
+    // =============================================================================
+    
+    // Companion Rename
+    vscode.commands.registerCommand("cmdify.companion.rename", async () => {
+      const currentName = companionService.getCompanionName();
+      const newName = await vscode.window.showInputBox({
+        prompt: 'Name your companion',
+        value: currentName,
+        placeHolder: 'Enter a name (max 20 characters)',
+        validateInput: (value) => {
+          if (value.length > 20) {return 'Name must be 20 characters or less';}
+          return null;
+        }
+      });
+      
+      if (newName !== undefined) {
+        await companionService.setCompanionName(newName);
+        vscode.window.showInformationMessage(`Your companion is now named "${companionService.getCompanionName()}"! 🎉`);
+      }
+    }),
+
+    // Export Data
+    vscode.commands.registerCommand("cmdify.exportData", async () => {
+      const commands = storage.getAll();
+      const companionState = companionService.getState();
+      const achievements = achievementService.getUnlockedAchievements();
+      const stats = activityService.getStats();
+      
+      const data = {
+        exportVersion: '1.0',
+        exportedAt: new Date().toISOString(),
+        commands,
+        activity: {
+          stats
+        },
+        companion: companionState,
+        achievements,
+      };
+      
+      const todayStr = new Date().toISOString().split('T')[0];
+      const uri = await vscode.window.showSaveDialog({
+        defaultUri: vscode.Uri.file(`cmdify-export-${todayStr}.json`),
+        filters: { 'JSON': ['json'] }
+      });
+      
+      if (uri) {
+        await vscode.workspace.fs.writeFile(
+          uri, 
+          Buffer.from(JSON.stringify(data, null, 2))
+        );
+        vscode.window.showInformationMessage('✅ Data exported successfully!');
+      }
+    }),
+
+    // Reset Progress
+    vscode.commands.registerCommand("cmdify.resetProgress", async () => {
+      const confirm = await vscode.window.showWarningMessage(
+        'Reset all Cmdify progress? This will clear your companion level, achievements, and activity history. Commands will NOT be deleted.',
+        { modal: true },
+        'Reset Everything',
+        'Cancel'
+      );
+      
+      if (confirm !== 'Reset Everything') {return;}
+      
+      // Double confirm
+      const doubleConfirm = await vscode.window.showWarningMessage(
+        'Are you absolutely sure? This cannot be undone.',
+        { modal: true },
+        'Yes, Reset',
+        'Cancel'
+      );
+      
+      if (doubleConfirm !== 'Yes, Reset') {return;}
+      
+      // Reset companion
+      await companionService.reset();
+      
+      // Reset achievements
+      await achievementService.reset();
+      
+      // Reset activity
+      await activityService.reset();
+      
+      // Reset focus stats
+      await focusService.resetStats();
+      
+      vscode.window.showInformationMessage(
+        "Progress reset. Your companion is starting fresh! 🐣"
+      );
+    }),
   ];
 
   context.subscriptions.push(...commands);
@@ -627,8 +782,9 @@ function updateFocusStatusBar(): void {
 
   const icons = COMPANION_ICONS[companionState.type];
   const icon = icons[focusState.status] || icons.idle;
+  const moodEmoji = companionService.getMoodEmoji();
 
-  let text = icon;
+  let text = `${icon}${moodEmoji}`;
 
   if (["focusing", "break", "paused"].includes(focusState.status)) {
     text += ` ${formatTime(focusState.timeRemaining)}`;

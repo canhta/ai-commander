@@ -8,7 +8,7 @@ import { CLICommand } from './command';
 /**
  * Tree item type for categorization
  */
-export type TreeItemType = 'favorites' | 'recent' | 'tag' | 'source' | 'command';
+export type TreeItemType = 'favorites' | 'recent' | 'tag' | 'source' | 'command' | 'mostUsed';
 
 /**
  * Command tree item interface for sidebar and command handlers

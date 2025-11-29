@@ -314,6 +314,24 @@
         "command": "cmdify.resetOnboarding",
         "title": "Reset Onboarding (Debug)",
         "category": "Cmdify"
+      },
+      {
+        "command": "cmdify.companion.rename",
+        "title": "Rename Companion",
+        "icon": "$(edit)",
+        "category": "Cmdify"
+      },
+      {
+        "command": "cmdify.exportData",
+        "title": "Export My Data",
+        "icon": "$(export)",
+        "category": "Cmdify"
+      },
+      {
+        "command": "cmdify.resetProgress",
+        "title": "Reset All Progress",
+        "icon": "$(warning)",
+        "category": "Cmdify"
       }
     ],
     "keybindings": [
@@ -534,6 +552,12 @@
             "description": "Number of recent commands to show",
             "order": 3
           },
+          "cmdify.view.showMostUsed": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show 'Most Used' section with top 5 frequently used commands",
+            "order": 4
+          },
           "cmdify.view.groupBy": {
             "type": "string",
             "enum": [
@@ -543,7 +567,7 @@
             ],
             "default": "none",
             "description": "How to group commands in the sidebar",
-            "order": 4
+            "order": 5
           }
         }
       },
@@ -756,6 +780,41 @@
             "default": true,
             "description": "Show today's coding time in the status bar",
             "order": 4
+          },
+          "cmdify.activity.weeklySummary": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show weekly summary notification on Mondays",
+            "order": 5
+          }
+        }
+      },
+      {
+        "title": "Achievements",
+        "order": 8,
+        "properties": {
+          "cmdify.achievements.notifyNearCompletion": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show notification when you're close (90%+) to unlocking an achievement",
+            "order": 1
+          },
+          "cmdify.achievements.dailyChallenges": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable daily challenges for bonus XP",
+            "order": 2
+          }
+        }
+      },
+      {
+        "title": "Focus Timer - Session Types",
+        "order": 9,
+        "properties": {
+          "cmdify.focus.showSessionTypePicker": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show session type picker when starting focus (Standard, Deep Work, Quick Task, Marathon)"
           }
         }
       }

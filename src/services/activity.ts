@@ -501,6 +501,21 @@ export class ActivityService implements vscode.Disposable {
     await this.context.globalState.update(key, getTodayString());
   }
 
+  // =============================================================================
+  // Reset (Phase 4)
+  // =============================================================================
+
+  /**
+   * Reset all activity tracking data
+   */
+  async reset(): Promise<void> {
+    this.currentDay = { ...DEFAULT_DAILY_ACTIVITY, date: getTodayString() };
+    this.history = [];
+    this.editedFilesSet.clear();
+    await this.saveCurrentDay();
+    await this.saveHistory();
+  }
+
   /**
    * Clean up resources
    */

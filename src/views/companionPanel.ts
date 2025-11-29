@@ -34,7 +34,9 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
       companionService.onStateChange(() => this.updateWebview()),
       // Update on XP gain and level up for immediate feedback
       companionService.onXPGain(() => this.updateWebview()),
-      companionService.onLevelUp(() => this.updateWebview())
+      companionService.onLevelUp(() => this.updateWebview()),
+      // Update on message change
+      companionService.onMessageChange(() => this.updateWebview())
     );
   }
 
@@ -89,6 +91,8 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
       const stats = this.focusService.getStats();
       const svgState = this.companionService.getSvgState();
       const xpProgress = this.companionService.getXPProgress();
+      const companionName = this.companionService.getCompanionName();
+      const currentMessage = this.companionService.getCurrentMessage();
 
       this.view.webview.postMessage({
         type: "update",
@@ -101,6 +105,9 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
         level: companionState.level,
         experience: companionState.experience,
         xpProgress,
+        // Phase 4: Custom name and message
+        companionName,
+        currentMessage,
       });
     }
   }
@@ -328,13 +335,37 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
       margin-bottom: 8px;
       text-align: center;
     }
+    
+    /* Message bubble (Phase 4) */
+    .message-bubble {
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+      padding: 8px 12px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+      display: none;
+    }
+    .message-bubble.visible {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <span class="companion-name" id="companionName">Robot</span>
-    <span class="level-badge" id="levelBadge">Level 1</span>
+    <span class="companion-name" id="companionName">${this.companionService.getCompanionName()}</span>
+    <span class="level-badge" id="levelBadge">Level ${companionState.level}</span>
   </div>
+  
+  <!-- Message bubble (Phase 4) -->
+  <div class="message-bubble" id="messageBubble"></div>
+  
   <div class="xp-bar">
     <div class="xp-fill" id="xpFill" style="width: 0%"></div>
   </div>
@@ -391,13 +422,22 @@ export class CompanionPanelProvider implements vscode.WebviewViewProvider {
       const msg = e.data;
       if (msg.type !== 'update') return;
       
-      const { focusState, companionType, svgState, streak, timeFormatted, level, experience, xpProgress } = msg;
+      const { focusState, companionType, svgState, streak, timeFormatted, level, experience, xpProgress, companionName, currentMessage } = msg;
       
       // Update progression
-      document.getElementById('companionName').textContent = companionType.charAt(0).toUpperCase() + companionType.slice(1);
+      document.getElementById('companionName').textContent = companionName || companionType.charAt(0).toUpperCase() + companionType.slice(1);
       document.getElementById('levelBadge').textContent = 'Level ' + level;
       document.getElementById('xpFill').style.width = xpProgress.percentage + '%';
       document.getElementById('xpLabel').textContent = xpProgress.current + ' / ' + xpProgress.needed + ' XP';
+      
+      // Update message bubble (Phase 4)
+      const messageBubble = document.getElementById('messageBubble');
+      if (currentMessage) {
+        messageBubble.textContent = currentMessage;
+        messageBubble.classList.add('visible');
+      } else {
+        messageBubble.classList.remove('visible');
+      }
       
       // Update timer and companion
       document.getElementById('timer').textContent = focusState.status === 'idle' ? '--:--' : timeFormatted;

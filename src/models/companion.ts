@@ -15,6 +15,16 @@ export type CompanionType =
 export type CompanionMood = 'happy' | 'focused' | 'tired' | 'celebrating';
 
 /**
+ * Mood emoji for status bar display
+ */
+export const MOOD_EMOJIS: Record<CompanionMood, string> = {
+  happy: '😊',
+  focused: '🎯',
+  tired: '😫',
+  celebrating: '🤩',
+};
+
+/**
  * SVG animation states (maps to file names)
  */
 export type CompanionSvgState = 'idle' | 'focus' | 'break' | 'celebrate';
@@ -71,6 +81,7 @@ export interface CompanionUnlock {
 export interface CompanionState {
   type: CompanionType;
   mood: CompanionMood;
+  name?: string;  // User-defined name (max 20 chars)
 
   // Progression fields
   level: number;
@@ -338,4 +349,199 @@ export const DEFAULT_COMPANION_STATE: CompanionState = {
 export const ALL_COMPANIONS: CompanionType[] = [
   'robot', 'cat', 'dog', 'plant', 'flame',
   'fox', 'owl', 'panda', 'star'
+];
+
+// =============================================================================
+// Companion Messages (Phase 4)
+// =============================================================================
+
+/**
+ * Contextual message categories for companion
+ */
+export type CompanionMessageCategory = 
+  | 'focusStart' 
+  | 'focusComplete' 
+  | 'breakStart' 
+  | 'streakMilestone'
+  | 'levelUp'
+  | 'achievementUnlock'
+  | 'idle'
+  | 'welcomeBack'
+  | 'todoComplete';
+
+/**
+ * Companion messages for different contexts
+ */
+export const COMPANION_MESSAGES: Record<CompanionMessageCategory, string[]> = {
+  focusStart: [
+    "Let's do this! 💪",
+    "Focus mode activated!",
+    "Time to get things done!",
+    "You've got this! 🎯",
+    "Let's crush it!"
+  ],
+  focusComplete: [
+    "Great session! 🎉",
+    "You crushed it!",
+    "Well deserved break!",
+    "Awesome work!",
+    "That was productive!"
+  ],
+  breakStart: [
+    "Take a breather! ☕",
+    "Stretch time!",
+    "Rest those eyes 👀",
+    "You earned this break!",
+    "Recharge mode! 🔋"
+  ],
+  streakMilestone: [
+    "{name} is so proud of your {streak}-day streak! 🔥",
+    "🔥 {streak} days! Keep it going!",
+    "Wow! {streak} days strong! 💪"
+  ],
+  levelUp: [
+    "🎉 Level up! {name} reached level {level}!",
+    "Woohoo! Level {level} unlocked!",
+    "{name} evolved to level {level}! ⭐"
+  ],
+  achievementUnlock: [
+    "{name} helped you unlock {achievement}! 🏆",
+    "Achievement unlocked: {achievement}! 🎊"
+  ],
+  idle: [
+    "Ready when you are! 😊",
+    "Waiting for you~",
+    "Let's code something cool!",
+    "💭"
+  ],
+  welcomeBack: [
+    "Welcome back! Ready to code? 💻",
+    "Missed you! Let's get started.",
+    "{name} is happy to see you! 😊"
+  ],
+  todoComplete: [
+    "One down! ✅",
+    "Nice! Task complete!",
+    "Checked off! 📋"
+  ]
+};
+
+/**
+ * Get random message from category with variable replacement
+ */
+export function getCompanionMessage(
+  category: CompanionMessageCategory,
+  variables?: Record<string, string | number>
+): string {
+  const messages = COMPANION_MESSAGES[category];
+  const message = messages[Math.floor(Math.random() * messages.length)];
+  
+  if (!variables) {return message;}
+  
+  return message.replace(/\{(\w+)\}/g, (_, key) => 
+    String(variables[key] ?? `{${key}}`)
+  );
+}
+
+// =============================================================================
+// Break Suggestions (Phase 4)
+// =============================================================================
+
+/**
+ * Break activity suggestions by duration
+ */
+export const BREAK_SUGGESTIONS: Record<number, string[]> = {
+  5: [
+    '🙆 Stretch your arms and shoulders',
+    '👀 Look at something 20 feet away for 20 seconds',
+    '💧 Drink some water',
+    '🚶 Stand up and walk around',
+    '🧘 Take 5 deep breaths'
+  ],
+  10: [
+    '🚶 Take a short walk',
+    '🙆 Do some stretches',
+    '🍎 Grab a healthy snack',
+    '☕ Make a cup of tea or coffee',
+    '🌿 Step outside for fresh air'
+  ],
+  15: [
+    '🚶 Go outside briefly',
+    '💪 Do a quick workout',
+    '🧘 Practice meditation',
+    '📱 Call a friend or family',
+    '🎵 Listen to your favorite song'
+  ]
+};
+
+/**
+ * Get a random break suggestion for the given duration
+ */
+export function getBreakSuggestion(breakMinutes: number): string {
+  // Find the closest matching duration
+  const durations = Object.keys(BREAK_SUGGESTIONS).map(Number).sort((a, b) => a - b);
+  let bestMatch = durations[0];
+  
+  for (const duration of durations) {
+    if (Math.abs(duration - breakMinutes) < Math.abs(bestMatch - breakMinutes)) {
+      bestMatch = duration;
+    }
+  }
+  
+  const suggestions = BREAK_SUGGESTIONS[bestMatch];
+  return suggestions[Math.floor(Math.random() * suggestions.length)];
+}
+
+// =============================================================================
+// Session Types (Phase 4)
+// =============================================================================
+
+/**
+ * Predefined session type configurations
+ */
+export interface SessionType {
+  id: string;
+  name: string;
+  focusMinutes: number;
+  breakMinutes: number;
+  icon: string;
+  description: string;
+}
+
+/**
+ * Available session types
+ */
+export const SESSION_TYPES: SessionType[] = [
+  { 
+    id: 'standard', 
+    name: 'Standard', 
+    focusMinutes: 25, 
+    breakMinutes: 5, 
+    icon: '🍅',
+    description: 'Classic Pomodoro technique'
+  },
+  { 
+    id: 'deep', 
+    name: 'Deep Work', 
+    focusMinutes: 50, 
+    breakMinutes: 10, 
+    icon: '🧠',
+    description: 'For complex tasks requiring concentration'
+  },
+  { 
+    id: 'quick', 
+    name: 'Quick Task', 
+    focusMinutes: 15, 
+    breakMinutes: 3, 
+    icon: '⚡',
+    description: 'Short bursts for simple tasks'
+  },
+  { 
+    id: 'marathon', 
+    name: 'Marathon', 
+    focusMinutes: 90, 
+    breakMinutes: 15, 
+    icon: '🏃',
+    description: 'Extended focus for deep work'
+  },
 ];

@@ -16,6 +16,9 @@ import {
   xpForLevel,
   UnlockCondition,
   COMPANION_NAMES,
+  CompanionMessageCategory,
+  getCompanionMessage,
+  MOOD_EMOJIS,
 } from '../models/companion';
 import { FocusService } from './focus';
 
@@ -27,6 +30,10 @@ const COMPANION_STATE_KEY = 'cmdify.companion.state';
 export class CompanionService implements vscode.Disposable {
   private state: CompanionState;
   private disposables: vscode.Disposable[] = [];
+
+  // Message system
+  private currentMessage: string = '';
+  private messageTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Event emitters
   private readonly _onStateChange = new vscode.EventEmitter<CompanionState>();
@@ -40,6 +47,9 @@ export class CompanionService implements vscode.Disposable {
 
   private readonly _onUnlock = new vscode.EventEmitter<{ type: 'companion' | 'accessory'; item: string }>();
   readonly onUnlock = this._onUnlock.event;
+
+  private readonly _onMessageChange = new vscode.EventEmitter<string>();
+  readonly onMessageChange = this._onMessageChange.event;
 
   // Track TODO completion count for unlocks
   private todoCompletedCount: number = 0;
@@ -162,6 +172,65 @@ export class CompanionService implements vscode.Disposable {
       type,
       vscode.ConfigurationTarget.Global
     );
+  }
+
+  // =============================================================================
+  // Companion Naming (Phase 4)
+  // =============================================================================
+
+  /**
+   * Set companion name (max 20 characters)
+   */
+  async setCompanionName(name: string): Promise<void> {
+    this.state.name = name.trim().substring(0, 20);
+    await this.saveState();
+  }
+
+  /**
+   * Get companion display name (custom name or default type name)
+   */
+  getCompanionName(): string {
+    return this.state.name || COMPANION_NAMES[this.state.type];
+  }
+
+  // =============================================================================
+  // Companion Messages (Phase 4)
+  // =============================================================================
+
+  /**
+   * Show a contextual message from the companion
+   */
+  showMessage(category: CompanionMessageCategory, variables?: Record<string, string | number>): void {
+    const message = getCompanionMessage(category, {
+      name: this.getCompanionName(),
+      ...variables
+    });
+    
+    this.currentMessage = message;
+    this._onMessageChange.fire(message);
+    
+    // Clear message after 5 seconds
+    if (this.messageTimeout) {
+      clearTimeout(this.messageTimeout);
+    }
+    this.messageTimeout = setTimeout(() => {
+      this.currentMessage = '';
+      this._onMessageChange.fire('');
+    }, 5000);
+  }
+
+  /**
+   * Get current companion message
+   */
+  getCurrentMessage(): string {
+    return this.currentMessage;
+  }
+
+  /**
+   * Get mood emoji for status bar
+   */
+  getMoodEmoji(): string {
+    return MOOD_EMOJIS[this.state.mood];
   }
 
   /**
@@ -406,11 +475,31 @@ export class CompanionService implements vscode.Disposable {
     this.todoCompletedCount = count;
   }
 
+  // =============================================================================
+  // Reset (Phase 4)
+  // =============================================================================
+
+  /**
+   * Reset companion progress (keeps type, resets XP/level/unlocks)
+   */
+  async reset(): Promise<void> {
+    this.state = {
+      ...DEFAULT_COMPANION_STATE,
+      type: this.state.type,
+      joinedDate: new Date().toISOString(),
+    };
+    await this.saveState();
+  }
+
   dispose(): void {
     this._onStateChange.dispose();
     this._onLevelUp.dispose();
     this._onXPGain.dispose();
     this._onUnlock.dispose();
+    this._onMessageChange.dispose();
+    if (this.messageTimeout) {
+      clearTimeout(this.messageTimeout);
+    }
     this.disposables.forEach(d => d.dispose());
   }
 }

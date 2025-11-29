@@ -32,6 +32,10 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
       return Promise.resolve(this.getFavoriteCommands());
     }
 
+    if (element.itemType === 'mostUsed') {
+      return Promise.resolve(this.getMostUsedCommandItems());
+    }
+
     if (element.itemType === 'recent') {
       return Promise.resolve(this.getRecentCommands());
     }
@@ -51,6 +55,7 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
     const config = vscode.workspace.getConfiguration('cmdify.view');
     const showRecent = config.get<boolean>('showRecent', true);
     const showFavorites = config.get<boolean>('showFavorites', true);
+    const showMostUsed = config.get<boolean>('showMostUsed', true);
     const groupBy = config.get<string>('groupBy', 'tags');
 
     const items: CommandTreeItem[] = [];
@@ -60,6 +65,14 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
       const favoritesCount = this.storage.getFavorites().length;
       if (favoritesCount > 0) {
         items.push(this.createCategoryItem('Favorites', 'favorites', favoritesCount, 'star-full'));
+      }
+    }
+
+    // Most Used section (Phase 4)
+    if (showMostUsed) {
+      const mostUsed = this.getMostUsedCommands();
+      if (mostUsed.length > 0) {
+        items.push(this.createCategoryItem('Most Used', 'mostUsed', mostUsed.length, 'graph'));
       }
     }
 
@@ -132,6 +145,19 @@ export class CommandsTreeProvider implements vscode.TreeDataProvider<CommandTree
     }
 
     return items;
+  }
+
+  // Phase 4: Get most used commands (top 5)
+  private getMostUsedCommands(): CLICommand[] {
+    return this.storage.getAll()
+      .filter(cmd => cmd.usageCount > 0)
+      .sort((a, b) => b.usageCount - a.usageCount)
+      .slice(0, 5);
+  }
+
+  // Phase 4: Get commands by most used
+  private getMostUsedCommandItems(): CommandTreeItem[] {
+    return this.getMostUsedCommands().map(cmd => this.createCommandItem(cmd));
   }
 
   private getFavoriteCommands(): CommandTreeItem[] {
