@@ -164,43 +164,6 @@ export const COMPANION_STATUS_CODICONS: Record<string, Record<string, string>> =
 // ============================================
 
 /**
- * TODO type emojis for webview display
- */
-export const TODO_TYPE_EMOJIS: Record<string, string> = {
-  'TODO': '📌',
-  'FIXME': '🔧',
-  'BUG': '🐛',
-  'HACK': '⚡',
-  'XXX': '⚠️',
-  'OPTIMIZE': '🚀',
-  'REVIEW': '👀',
-  'DEFAULT': '📋',
-};
-
-/**
- * TODO category emojis for webview display
- */
-export const TODO_CATEGORY_EMOJIS: Record<string, string> = {
-  'overdue': '⚠️',
-  'today': '📅',
-  'thisWeek': '📆',
-  'upcoming': '🗓️',
-  'noDate': '📝',
-  'completed': '✅',
-};
-
-/**
- * Achievement category emojis
- */
-export const ACHIEVEMENT_CATEGORY_EMOJIS: Record<string, string> = {
-  'focus': '🎯',
-  'streaks': '🔥',
-  'todos': '✅',
-  'commands': '⌨️',
-  'special': '⭐',
-};
-
-/**
  * Companion type emojis
  */
 export const COMPANION_TYPE_EMOJIS: Record<string, string> = {
@@ -295,21 +258,6 @@ export function getTodoCategoryThemeIcon(category: string): vscode.ThemeIcon {
 }
 
 /**
- * Get emoji for a TODO type (for webviews)
- */
-export function getTodoTypeEmoji(type: string): string {
-  const upperType = type.toUpperCase();
-  return TODO_TYPE_EMOJIS[upperType] || TODO_TYPE_EMOJIS['DEFAULT'];
-}
-
-/**
- * Get emoji for a TODO category (for webviews)
- */
-export function getTodoCategoryEmoji(category: string): string {
-  return TODO_CATEGORY_EMOJIS[category] || TODO_CATEGORY_EMOJIS['noDate'];
-}
-
-/**
  * Get ThemeIcon for command source
  */
 export function getCommandSourceThemeIcon(source: string): vscode.ThemeIcon {
@@ -332,16 +280,3 @@ export function getCompanionEmoji(companionType: string): string {
   return COMPANION_TYPE_EMOJIS[companionType] || COMPANION_TYPE_EMOJIS['robot'];
 }
 
-/**
- * Get achievement category emoji
- */
-export function getAchievementCategoryEmoji(category: string): string {
-  return ACHIEVEMENT_CATEGORY_EMOJIS[category] || ACHIEVEMENT_CATEGORY_EMOJIS['special'];
-}
-
-/**
- * Get AI provider emoji
- */
-export function getAIProviderEmoji(providerId: string): string {
-  return AI_PROVIDER_EMOJIS[providerId] || AI_PROVIDER_EMOJIS['custom'];
-}
