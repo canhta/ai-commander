@@ -582,17 +582,25 @@
               "dog",
               "robot",
               "plant",
-              "flame"
+              "flame",
+              "fox",
+              "owl",
+              "panda",
+              "star"
             ],
             "enumDescriptions": [
               "Cat - Cute and cuddly",
               "Dog - Loyal friend",
               "Robot - Tech buddy",
               "Plant - Growing companion",
-              "Flame - Fiery spirit"
+              "Flame - Fiery spirit",
+              "Fox - Clever friend (unlock: 50 TODOs)",
+              "Owl - Night companion (unlock: 5 midnight sessions)",
+              "Panda - Legendary (unlock: 100-day streak)",
+              "Star - Elite (unlock: Level 25)"
             ],
             "default": "robot",
-            "description": "Focus companion character",
+            "description": "Focus companion character (some companions must be unlocked)",
             "order": 7
           }
         }

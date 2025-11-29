@@ -30,7 +30,11 @@ import { ReminderService } from './services/reminder';
 import { AchievementService } from './services/achievement';
 import { createTodoTreeView, TodoTreeItem } from './views/todoTreeProvider';
 import { AchievementPanelProvider } from './views/achievementPanel';
-import { DetectedTodo, GlobalReminder } from './models/todo';
+import { DetectedTodo } from './models/todo';
+
+// =============================================================================
+// Global Service References
+// =============================================================================
 
 let storage: StorageService;
 let treeProvider: CommandsTreeProvider;
@@ -48,298 +52,321 @@ let activityStatusBarItem: vscode.StatusBarItem;
 let activityPanelProvider: ActivityPanelProvider;
 let achievementService: AchievementService;
 let achievementPanelProvider: AchievementPanelProvider;
+let todoTreeProvider: ReturnType<typeof createTodoTreeView>['provider'];
 
-/**
- * Update the noCommands context for welcome view
- */
+// =============================================================================
+// Context Management
+// =============================================================================
+
 async function updateNoCommandsContext(): Promise<void> {
   const hasCommands = storage.getAll().length > 0;
   await vscode.commands.executeCommand('setContext', 'cmdify.noCommands', !hasCommands);
 }
 
-/**
- * Check if AI provider is configured (has API key or is Ollama)
- */
 async function checkAIConfigured(context: vscode.ExtensionContext): Promise<boolean> {
   const config = vscode.workspace.getConfiguration('cmdify.ai');
   const providerName = config.get<string>('provider', 'openai');
 
-  // Ollama doesn't need an API key
   if (providerName === 'ollama') {
     return true;
   }
 
-  // Check if API key exists for the provider
   const apiKey = await context.secrets.get(`cmdify.${providerName}`);
   return !!apiKey;
 }
 
-/**
- * Update the aiNotConfigured context for welcome view
- */
 async function updateAIConfiguredContext(context: vscode.ExtensionContext): Promise<void> {
   const isConfigured = await checkAIConfigured(context);
   await vscode.commands.executeCommand('setContext', 'cmdify.aiNotConfigured', !isConfigured);
 }
 
-export async function activate(context: vscode.ExtensionContext) {
+// =============================================================================
+// Extension Activation
+// =============================================================================
+
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
   console.log('Cmdify is now active!');
 
-  // Initialize storage
+  // Initialize core services
+  await initializeCoreServices(context);
+
+  // Initialize UI components
+  initializeUIComponents(context);
+
+  // Initialize gamification services
+  initializeGamificationServices(context);
+
+  // Setup event listeners
+  setupEventListeners(context);
+
+  // Register all commands
+  registerCommands(context);
+
+  // Add disposables to context
+  addDisposables(context);
+}
+
+// =============================================================================
+// Service Initialization
+// =============================================================================
+
+async function initializeCoreServices(context: vscode.ExtensionContext): Promise<void> {
+  // Storage
   storage = new StorageService(context);
   await storage.initialize();
 
-  // Set initial context for welcome view
+  // Set initial context
   await updateNoCommandsContext();
   await updateAIConfiguredContext(context);
 
-  // Initialize AI provider
+  // AI Provider
   aiProvider = await initializeAIProvider(context);
 
-  // Initialize sync service
+  // Sync Service
   syncService = new GitHubSyncService(storage, context);
 
-  // Initialize tree view
+  // Focus Timer
+  focusService = new FocusService(context);
+  companionService = new CompanionService(context, focusService);
+
+  // TODO Scanner
+  todoScannerService = new TodoScannerService(context);
+  todoSyncService = new TodoSyncService(context, todoScannerService);
+  reminderService = new ReminderService(context, todoScannerService, todoSyncService);
+
+  // Activity Tracking
+  activityService = new ActivityService(context);
+}
+
+function initializeUIComponents(context: vscode.ExtensionContext): void {
+  // Commands Tree View
   treeProvider = new CommandsTreeProvider(storage);
   const treeView = vscode.window.createTreeView('cmdify.commands', {
     treeDataProvider: treeProvider,
     showCollapseAll: true,
   });
+  context.subscriptions.push(treeView);
 
-  // Update context when storage changes
-  storage.onDidChange(async () => {
-    await updateNoCommandsContext();
-  });
-
-  // Initialize Focus Timer services
-  focusService = new FocusService(context);
-  companionService = new CompanionService(context, focusService);
-
-  // Initialize Focus Timer status bar
-  focusStatusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Right,
-    100
-  );
-  focusStatusBarItem.command = 'cmdify.focus.showPanel';
-  updateFocusStatusBar();
-  focusStatusBarItem.show();
-
-  // Listen for focus timer updates
-  focusService.onTick(() => updateFocusStatusBar());
-  focusService.onStateChange(() => updateFocusStatusBar());
-  companionService.onStateChange(() => updateFocusStatusBar());
-
-  // Register Companion Panel webview
+  // Companion Panel
   const companionPanelProvider = new CompanionPanelProvider(
     context.extensionUri,
     focusService,
     companionService
   );
-  const companionPanelDisposable = vscode.window.registerWebviewViewProvider(
-    CompanionPanelProvider.viewType,
-    companionPanelProvider
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      CompanionPanelProvider.viewType,
+      companionPanelProvider
+    )
   );
 
-  // Initialize TODO Scanner services
-  todoScannerService = new TodoScannerService(context);
-  todoSyncService = new TodoSyncService(context, todoScannerService);
-  reminderService = new ReminderService(context, todoScannerService, todoSyncService);
+  // TODO Tree View
+  const todoTreeResult = createTodoTreeView(todoScannerService, reminderService);
+  todoTreeProvider = todoTreeResult.provider;
+  context.subscriptions.push(todoTreeResult.treeView, todoTreeResult.provider);
 
-  // Create TODO tree view
-  const { treeView: todoTreeView, provider: todoTreeProvider } = createTodoTreeView(
-    todoScannerService,
-    reminderService
-  );
+  // Activity Panel
+  activityPanelProvider = new ActivityPanelProvider(context.extensionUri, activityService);
 
-  // Initialize TODO status bar
-  todoStatusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Right,
-    99
-  );
+  // Status Bars
+  initializeStatusBars();
+}
+
+function initializeStatusBars(): void {
+  // Focus Timer Status Bar
+  focusStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  focusStatusBarItem.command = 'cmdify.focus.showPanel';
+  updateFocusStatusBar();
+  focusStatusBarItem.show();
+
+  // Activity Status Bar
+  const activityConfig = activityService.getConfig();
+  if (activityConfig.showInStatusBar) {
+    activityStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99.5);
+    activityStatusBarItem.command = 'cmdify.activity.showDashboard';
+    updateActivityStatusBar();
+    activityStatusBarItem.show();
+  }
+
+  // TODO Status Bar
+  todoStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
   todoStatusBarItem.command = 'cmdify.todos.scan';
   updateTodoStatusBar();
   todoStatusBarItem.show();
+}
 
-  // Listen for TODO changes
-  todoScannerService.onTodosChanged(() => updateTodoStatusBar());
-
-  // Initial workspace scan (delayed to not block activation)
-  setTimeout(() => {
-    todoScannerService.scanWorkspace();
-  }, 2000);
-
-  // Initialize Activity Tracking service
-  activityService = new ActivityService(context);
-  activityPanelProvider = new ActivityPanelProvider(context.extensionUri, activityService);
-
-  // Initialize Achievement System
+function initializeGamificationServices(context: vscode.ExtensionContext): void {
+  // Achievement System
   achievementService = new AchievementService(context, companionService, activityService);
   achievementPanelProvider = new AchievementPanelProvider(context.extensionUri, achievementService);
 
-  // Track command creation for achievements
+  // Track night owl usage
+  companionService.trackNightOwlUsage();
+}
+
+// =============================================================================
+// Event Listeners
+// =============================================================================
+
+function setupEventListeners(context: vscode.ExtensionContext): void {
+  // Storage changes
   storage.onDidChange(async () => {
+    await updateNoCommandsContext();
     const commandCount = storage.getAll().length;
     await achievementService.checkCommandAchievements(commandCount);
   });
 
-  // Initialize Activity status bar (between focus and TODO)
-  const activityConfig = activityService.getConfig();
-  if (activityConfig.showInStatusBar) {
-    activityStatusBarItem = vscode.window.createStatusBarItem(
-      vscode.StatusBarAlignment.Right,
-      99.5 // Between focus (100) and TODO (99)
-    );
-    activityStatusBarItem.command = 'cmdify.activity.showDashboard';
-    updateActivityStatusBar();
-    activityStatusBarItem.show();
+  // Focus timer events
+  focusService.onTick(() => updateFocusStatusBar());
+  focusService.onStateChange(() => updateFocusStatusBar());
+  companionService.onStateChange(() => updateFocusStatusBar());
 
-    // Listen for activity updates
-    activityService.onActivityUpdate(() => updateActivityStatusBar());
-  }
-
-  // Connect focus session completion to activity tracking
+  // Focus session completion
   focusService.onSessionComplete(async () => {
-    const focusConfig = focusService.getConfig();
-    await activityService.recordFocusSession(focusConfig.focusDuration);
-
-    // Award XP for completing focus session
-    await companionService.awardXP(100, 'focusSessionComplete');
-
-    // Check focus achievements
-    const stats = activityService.getStats();
-    await achievementService.checkFocusAchievements(stats.totalSessions);
-    
-    // Check marathon achievement (5 sessions in a day)
-    const today = activityService.getToday();
-    if (today) {
-      await achievementService.trackDailySessions(today.focusSessions);
-    }
+    await handleFocusSessionComplete();
   });
 
-  // Award XP for taking breaks
+  // Break start
   focusService.onBreakStart(async () => {
     await companionService.awardXP(25, 'breakTaken');
   });
 
-  // Show level-up notifications
-  companionService.onLevelUp(async (newLevel) => {
-    const companionState = companionService.getState();
+  // Companion events
+  companionService.onLevelUp(handleLevelUp);
+  companionService.onUnlock(handleUnlock);
+
+  // TODO changes
+  todoScannerService.onTodosChanged(() => {
+    updateTodoStatusBar();
+    const completedCount = todoScannerService.getCompletedTodos().length;
+    companionService.updateTodoCount(completedCount);
+  });
+
+  // Activity updates
+  if (activityStatusBarItem) {
+    activityService.onActivityUpdate(() => updateActivityStatusBar());
+  }
+
+  // Configuration changes
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
+      if (e.affectsConfiguration('cmdify.ai')) {
+        aiProvider = await initializeAIProvider(context);
+        await updateAIConfiguredContext(context);
+      }
+    })
+  );
+
+  // Initial workspace scan
+  setTimeout(() => {
+    todoScannerService.scanWorkspace();
+  }, 2000);
+}
+
+async function handleFocusSessionComplete(): Promise<void> {
+  const focusConfig = focusService.getConfig();
+  await activityService.recordFocusSession(focusConfig.focusDuration);
+  await companionService.awardXP(100, 'focusSessionComplete');
+
+  const stats = activityService.getStats();
+  await achievementService.checkFocusAchievements(stats.totalSessions);
+
+  const today = activityService.getToday();
+  if (today) {
+    await achievementService.trackDailySessions(today.focusSessions);
+  }
+
+  if (stats.todayGoalProgress >= 100 && !activityService.hasDailyGoalBonusAwarded()) {
+    await companionService.awardXP(200, 'dailyGoalReached');
+    await activityService.markDailyGoalBonusAwarded();
+  }
+}
+
+async function handleLevelUp(newLevel: number): Promise<void> {
+  const companionState = companionService.getState();
+  const action = await vscode.window.showInformationMessage(
+    `🎉 Level Up! Your ${companionState.type} is now Level ${newLevel}!`,
+    'View Stats'
+  );
+
+  if (action === 'View Stats') {
+    vscode.commands.executeCommand('cmdify.focus.showPanel');
+  }
+}
+
+async function handleUnlock({ type, item }: { type: 'companion' | 'accessory'; item: string }): Promise<void> {
+  if (type === 'companion') {
     const action = await vscode.window.showInformationMessage(
-      `🎉 Level Up! Your ${companionState.type} is now Level ${newLevel}!`,
-      'View Stats'
+      `🐾 New Companion Unlocked: ${item.charAt(0).toUpperCase() + item.slice(1)}!`,
+      'Switch Now',
+      'Later'
     );
 
-    if (action === 'View Stats') {
-      // TODO: Open companion stats panel
-      vscode.commands.executeCommand('cmdify.focus.showPanel');
+    if (action === 'Switch Now') {
+      await companionService.setCompanionType(item as any);
     }
-  });
+  } else {
+    vscode.window.showInformationMessage(`✨ New Accessory Unlocked: ${item}!`);
+  }
+}
 
-  // Show unlock notifications
-  companionService.onUnlock(async ({ type, item }) => {
-    if (type === 'companion') {
-      const unlock = await vscode.window.showInformationMessage(
-        `🐾 New Companion Unlocked: ${item.charAt(0).toUpperCase() + item.slice(1)}!`,
-        'Switch Now',
-        'Later'
-      );
+// =============================================================================
+// Command Registration
+// =============================================================================
 
-      if (unlock === 'Switch Now') {
-        await companionService.setCompanionType(item as any);
-      }
-    } else {
-      vscode.window.showInformationMessage(
-        `✨ New Accessory Unlocked: ${item}!`
-      );
-    }
-  });
-
-  // Track night owl usage for owl companion unlock
-  companionService.trackNightOwlUsage();
-
-  // Register commands
+function registerCommands(context: vscode.ExtensionContext): void {
   const commands = [
-    vscode.commands.registerCommand('cmdify.create', () =>
-      handleCreate(storage, aiProvider)
-    ),
-    vscode.commands.registerCommand('cmdify.run', () =>
-      handleRun(undefined, storage)
-    ),
-    vscode.commands.registerCommand('cmdify.runFromTree', (item) =>
-      handleRun(item, storage)
-    ),
-    vscode.commands.registerCommand('cmdify.search', () =>
-      handleSearch(storage)
-    ),
-    vscode.commands.registerCommand('cmdify.copy', () =>
-      handleCopy(undefined, storage)
-    ),
-    vscode.commands.registerCommand('cmdify.copyFromTree', (item) =>
-      handleCopy(item, storage)
-    ),
-    vscode.commands.registerCommand('cmdify.edit', (item) =>
-      handleEdit(item, storage)
-    ),
-    vscode.commands.registerCommand('cmdify.delete', (item) =>
-      handleDelete(item, storage)
-    ),
-    vscode.commands.registerCommand('cmdify.sync', () =>
-      handleSync(syncService)
-    ),
-    vscode.commands.registerCommand('cmdify.export', () =>
-      handleExport(storage)
-    ),
-    vscode.commands.registerCommand('cmdify.import', () =>
-      handleImport(storage)
-    ),
-    vscode.commands.registerCommand('cmdify.login', () =>
-      handleLogin(syncService)
-    ),
+    // Core Commands
+    vscode.commands.registerCommand('cmdify.create', async () => {
+      const newCommand = await handleCreate(storage, aiProvider);
+      if (newCommand?.source === 'ai') {
+        await achievementService.trackAICommandGenerated();
+      }
+    }),
+    vscode.commands.registerCommand('cmdify.run', () => handleRun(undefined, storage)),
+    vscode.commands.registerCommand('cmdify.runFromTree', (item) => handleRun(item, storage)),
+    vscode.commands.registerCommand('cmdify.search', () => handleSearch(storage)),
+    vscode.commands.registerCommand('cmdify.copy', () => handleCopy(undefined, storage)),
+    vscode.commands.registerCommand('cmdify.copyFromTree', (item) => handleCopy(item, storage)),
+    vscode.commands.registerCommand('cmdify.edit', (item) => handleEdit(item, storage)),
+    vscode.commands.registerCommand('cmdify.delete', (item) => handleDelete(item, storage)),
+
+    // Sync Commands
+    vscode.commands.registerCommand('cmdify.sync', async () => {
+      await handleSync(syncService);
+      await achievementService.trackSync();
+    }),
+    vscode.commands.registerCommand('cmdify.export', () => handleExport(storage)),
+    vscode.commands.registerCommand('cmdify.import', () => handleImport(storage)),
+    vscode.commands.registerCommand('cmdify.login', () => handleLogin(syncService)),
+
+    // Settings Commands
     vscode.commands.registerCommand('cmdify.settings', () =>
-      vscode.commands.executeCommand(
-        'workbench.action.openSettings',
-        'cmdify'
-      )
+      vscode.commands.executeCommand('workbench.action.openSettings', 'cmdify')
     ),
-    vscode.commands.registerCommand('cmdify.configureAI', () =>
-      configureAIProvider(context)
-    ),
-    vscode.commands.registerCommand('cmdify.refresh', () =>
-      treeProvider.refresh()
-    ),
+    vscode.commands.registerCommand('cmdify.configureAI', () => configureAIProvider(context)),
+    vscode.commands.registerCommand('cmdify.refresh', () => treeProvider.refresh()),
     vscode.commands.registerCommand('cmdify.sponsor', () =>
       vscode.env.openExternal(vscode.Uri.parse('https://ko-fi.com/canhta'))
     ),
-    vscode.commands.registerCommand('cmdify.about', () =>
-      handleAbout()
-    ),
-    // Focus Timer commands
-    vscode.commands.registerCommand('cmdify.focus.start', () =>
-      focusService.start()
-    ),
-    vscode.commands.registerCommand('cmdify.focus.pause', () =>
-      focusService.pause()
-    ),
-    vscode.commands.registerCommand('cmdify.focus.resume', () =>
-      focusService.resume()
-    ),
-    vscode.commands.registerCommand('cmdify.focus.stop', () =>
-      focusService.stop()
-    ),
-    vscode.commands.registerCommand('cmdify.focus.skip', () =>
-      focusService.skip()
-    ),
+    vscode.commands.registerCommand('cmdify.about', () => handleAbout()),
+
+    // Focus Timer Commands
+    vscode.commands.registerCommand('cmdify.focus.start', () => focusService.start()),
+    vscode.commands.registerCommand('cmdify.focus.pause', () => focusService.pause()),
+    vscode.commands.registerCommand('cmdify.focus.resume', () => focusService.resume()),
+    vscode.commands.registerCommand('cmdify.focus.stop', () => focusService.stop()),
+    vscode.commands.registerCommand('cmdify.focus.skip', () => focusService.skip()),
     vscode.commands.registerCommand('cmdify.focus.showPanel', () =>
       vscode.commands.executeCommand('cmdify.focus.focus')
     ),
-    // TODO Scanner commands
+
+    // TODO Commands
     vscode.commands.registerCommand('cmdify.todos.scan', async () => {
-      const count = await todoScannerService.scanWorkspace();
-      vscode.window.showInformationMessage(`📋 Found ${count.length} TODO items`);
+      const todos = await todoScannerService.scanWorkspace();
+      vscode.window.showInformationMessage(`📋 Found ${todos.length} TODO items`);
     }),
-    vscode.commands.registerCommand('cmdify.todos.refresh', () =>
-      todoTreeProvider.refresh()
-    ),
+    vscode.commands.registerCommand('cmdify.todos.refresh', () => todoTreeProvider.refresh()),
     vscode.commands.registerCommand('cmdify.todo.goToCode', async (item: TodoTreeItem | DetectedTodo) => {
       const todo = (item as TodoTreeItem).todo ?? (item as DetectedTodo);
       if (todo && 'filePath' in todo) {
@@ -357,8 +384,7 @@ export async function activate(context: vscode.ExtensionContext) {
       if (todo && 'id' in todo && todo.id) {
         await todoScannerService.markComplete(todo.id);
         vscode.window.showInformationMessage('✅ TODO marked as complete');
-        
-        // Track TODO completion for achievements
+
         const completedCount = todoScannerService.getCompletedTodos().length;
         await achievementService.checkTodoAchievements(completedCount);
         await companionService.awardXP(50, 'todoComplete');
@@ -376,6 +402,8 @@ export async function activate(context: vscode.ExtensionContext) {
         await todoSyncService.deleteTodoLine(todo);
       }
     }),
+
+    // Reminder Commands
     vscode.commands.registerCommand('cmdify.reminder.add', async () => {
       const reminder = await reminderService.createGlobalReminderInteractive();
       if (reminder) {
@@ -403,55 +431,19 @@ export async function activate(context: vscode.ExtensionContext) {
         }
       }
     }),
-    // Activity Dashboard command
-    vscode.commands.registerCommand('cmdify.activity.showDashboard', () => {
-      activityPanelProvider.show();
-    }),
-    // Achievement System commands
-    vscode.commands.registerCommand('cmdify.showAchievements', () => {
-      achievementPanelProvider.show();
-    }),
+
+    // Activity & Achievement Commands
+    vscode.commands.registerCommand('cmdify.activity.showDashboard', () => activityPanelProvider.show()),
+    vscode.commands.registerCommand('cmdify.showAchievements', () => achievementPanelProvider.show()),
   ];
 
-  // Listen for configuration changes
-  const configListener = vscode.workspace.onDidChangeConfiguration(async (e) => {
-    if (e.affectsConfiguration('cmdify.ai')) {
-      aiProvider = await initializeAIProvider(context);
-      await updateAIConfiguredContext(context);
-    }
-  });
-
-  context.subscriptions.push(
-    treeView,
-    storage,
-    treeProvider,
-    configListener,
-    focusService,
-    companionService,
-    focusStatusBarItem,
-    companionPanelDisposable,
-    todoScannerService,
-    todoSyncService,
-    reminderService,
-    todoTreeView,
-    todoTreeProvider,
-    todoStatusBarItem,
-    activityService,
-    activityPanelProvider,
-    achievementService,
-    achievementPanelProvider,
-    ...commands
-  );
-
-  // Add activity status bar to subscriptions if created
-  if (activityStatusBarItem) {
-    context.subscriptions.push(activityStatusBarItem);
-  }
+  context.subscriptions.push(...commands);
 }
 
-/**
- * Update the focus timer status bar
- */
+// =============================================================================
+// Status Bar Updates
+// =============================================================================
+
 function updateFocusStatusBar(): void {
   const focusState = focusService.getState();
   const companionState = companionService.getState();
@@ -462,7 +454,7 @@ function updateFocusStatusBar(): void {
 
   let text = icon;
 
-  if (focusState.status === 'focusing' || focusState.status === 'break' || focusState.status === 'paused') {
+  if (['focusing', 'break', 'paused'].includes(focusState.status)) {
     text += ` ${formatTime(focusState.timeRemaining)}`;
   }
 
@@ -474,9 +466,6 @@ function updateFocusStatusBar(): void {
   focusStatusBarItem.tooltip = getFocusTooltip(focusState.status, focusState.todaySessions);
 }
 
-/**
- * Update the TODO status bar
- */
 function updateTodoStatusBar(): void {
   const openCount = todoScannerService.getOpenCount();
   const dueCount = todoScannerService.getDueCount();
@@ -493,82 +482,55 @@ function updateTodoStatusBar(): void {
   }
 }
 
-/**
- * Update the activity status bar
- */
 function updateActivityStatusBar(): void {
-  if (!activityStatusBarItem) {
-    return;
-  }
+  if (!activityStatusBarItem) return;
 
-  const text = activityService.getStatusBarText();
-  const tooltip = activityService.getStatusBarTooltip();
-
-  activityStatusBarItem.text = `$(clock) ${text}`;
-  activityStatusBarItem.tooltip = tooltip;
+  activityStatusBarItem.text = `$(clock) ${activityService.getStatusBarText()}`;
+  activityStatusBarItem.tooltip = activityService.getStatusBarTooltip();
 }
 
-/**
- * Get tooltip for focus status bar
- */
 function getFocusTooltip(status: string, todaySessions: number): string {
-  let tooltip = 'Focus Timer - Click to open panel\n';
-  tooltip += `${todaySessions} sessions today\n`;
+  const statusMessages: Record<string, string> = {
+    focusing: 'Currently focusing...',
+    break: 'Taking a break',
+    paused: 'Session paused',
+  };
 
-  switch (status) {
-    case 'focusing':
-      tooltip += 'Currently focusing...';
-      break;
-    case 'break':
-      tooltip += 'Taking a break';
-      break;
-    case 'paused':
-      tooltip += 'Session paused';
-      break;
-    default:
-      tooltip += 'Ready to focus';
-  }
-
-  return tooltip;
+  return [
+    'Focus Timer - Click to open panel',
+    `${todaySessions} sessions today`,
+    statusMessages[status] || 'Ready to focus',
+  ].join('\n');
 }
 
-/**
- * Initialize the AI provider based on configuration
- */
-async function initializeAIProvider(
-  context: vscode.ExtensionContext
-): Promise<AIProvider | undefined> {
+// =============================================================================
+// AI Provider Configuration
+// =============================================================================
+
+async function initializeAIProvider(context: vscode.ExtensionContext): Promise<AIProvider | undefined> {
   const config = vscode.workspace.getConfiguration('cmdify.ai');
   const providerName = config.get<string>('provider', 'openai');
 
-  switch (providerName) {
-    case 'openai':
-      return new OpenAIProvider(context.secrets);
-    case 'anthropic':
-      return new AnthropicProvider(context.secrets);
-    case 'ollama':
-      return new OllamaProvider();
-    case 'azure':
-      return new AzureOpenAIProvider(context.secrets);
-    case 'custom':
-      return new CustomProvider(context.secrets);
-    default:
-      return undefined;
-  }
+  const providers: Record<string, () => AIProvider> = {
+    openai: () => new OpenAIProvider(context.secrets),
+    anthropic: () => new AnthropicProvider(context.secrets),
+    ollama: () => new OllamaProvider(),
+    azure: () => new AzureOpenAIProvider(context.secrets),
+    custom: () => new CustomProvider(context.secrets),
+  };
+
+  return providers[providerName]?.();
 }
 
-/**
- * Configure AI provider (API key setup)
- */
+interface QuickPickItemWithValue extends vscode.QuickPickItem {
+  value: string;
+}
+
 async function configureAIProvider(context: vscode.ExtensionContext): Promise<void> {
   const config = vscode.workspace.getConfiguration('cmdify.ai');
 
   // Step 1: Select provider
-  interface ProviderItem extends vscode.QuickPickItem {
-    value: string;
-  }
-
-  const providers: ProviderItem[] = [
+  const providers: QuickPickItemWithValue[] = [
     { label: 'OpenAI', value: 'openai', description: 'GPT-4o, GPT-4o-mini, GPT-4 Turbo' },
     { label: 'Anthropic', value: 'anthropic', description: 'Claude Sonnet, Claude Haiku' },
     { label: 'Ollama', value: 'ollama', description: 'Local models (no API key needed)' },
@@ -576,40 +538,31 @@ async function configureAIProvider(context: vscode.ExtensionContext): Promise<vo
     { label: 'Custom', value: 'custom', description: 'Custom OpenAI-compatible endpoint' },
   ];
 
-  const selectedProvider = await vscode.window.showQuickPick<ProviderItem>(providers, {
+  const selectedProvider = await vscode.window.showQuickPick(providers, {
     placeHolder: 'Select AI provider',
     title: 'Step 1: Select AI Provider',
   });
 
-  if (!selectedProvider) {
-    return;
-  }
+  if (!selectedProvider) return;
 
-  // Handle custom provider separately
   if (selectedProvider.value === 'custom') {
     await configureCustomProvider(context, config);
     return;
   }
 
-  // Step 2: Select model (dropdown)
-  const models = await getModelsForProvider(selectedProvider.value, context);
+  // Step 2: Select model
+  const models = await getModelsForProvider(selectedProvider.value);
   if (models.length === 0) {
     vscode.window.showErrorMessage('No models available for this provider.');
     return;
   }
 
-  interface ModelItem extends vscode.QuickPickItem {
-    value: string;
-  }
-
-  const selectedModel = await vscode.window.showQuickPick<ModelItem>(models, {
+  const selectedModel = await vscode.window.showQuickPick(models, {
     placeHolder: 'Select model',
     title: 'Step 2: Select AI Model',
   });
 
-  if (!selectedModel) {
-    return;
-  }
+  if (!selectedModel) return;
 
   // Step 3: Enter API key (if required)
   if (selectedProvider.value !== 'ollama') {
@@ -620,20 +573,10 @@ async function configureAIProvider(context: vscode.ExtensionContext): Promise<vo
       placeHolder: selectedProvider.value === 'azure' ? 'Your Azure API key' : 'sk-...',
       title: `Step 3: ${selectedProvider.label} API Key`,
       value: existingKey ? '' : undefined,
-      validateInput: (value) => {
-        if (!value && !existingKey) {
-          return 'API key is required';
-        }
-        return undefined;
-      },
+      validateInput: (value) => (!value && !existingKey ? 'API key is required' : undefined),
     });
 
-    // User cancelled
-    if (apiKey === undefined) {
-      return;
-    }
-
-    // Only store if a new key was provided
+    if (apiKey === undefined) return;
     if (apiKey) {
       await context.secrets.store(`cmdify.${selectedProvider.value}`, apiKey);
     }
@@ -646,56 +589,39 @@ async function configureAIProvider(context: vscode.ExtensionContext): Promise<vo
       placeHolder: 'https://your-resource.openai.azure.com',
       title: 'Step 4: Azure OpenAI Endpoint',
       validateInput: (value) => {
-        if (!value) {
-          return 'Endpoint is required for Azure';
-        }
-        if (!value.startsWith('https://')) {
-          return 'Endpoint must start with https://';
-        }
+        if (!value) return 'Endpoint is required for Azure';
+        if (!value.startsWith('https://')) return 'Endpoint must start with https://';
         return undefined;
       },
     });
 
-    if (!endpoint) {
-      return;
-    }
-
+    if (!endpoint) return;
     await config.update('customEndpoint', endpoint, vscode.ConfigurationTarget.Global);
   }
 
-  // Save provider and model configuration
+  // Save configuration
   await config.update('provider', selectedProvider.value, vscode.ConfigurationTarget.Global);
   await config.update('model', selectedModel.value, vscode.ConfigurationTarget.Global);
 
-  // Clear custom endpoint for non-Azure providers
   if (selectedProvider.value !== 'azure') {
     await config.update('customEndpoint', '', vscode.ConfigurationTarget.Global);
   }
 
-  // Reinitialize provider and update context
   aiProvider = await initializeAIProvider(context);
   await updateAIConfiguredContext(context);
-  vscode.window.showInformationMessage(
-    `AI configured: ${selectedProvider.label} with ${selectedModel.label}`
-  );
+  vscode.window.showInformationMessage(`AI configured: ${selectedProvider.label} with ${selectedModel.label}`);
 }
 
-/**
- * Configure custom OpenAI-compatible provider
- */
 async function configureCustomProvider(
   context: vscode.ExtensionContext,
   config: vscode.WorkspaceConfiguration
 ): Promise<void> {
-  // Step 2: Enter custom endpoint
   const endpoint = await vscode.window.showInputBox({
     prompt: 'Enter your custom API endpoint',
     placeHolder: 'https://api.example.com/v1/chat/completions',
     title: 'Step 2: Custom API Endpoint',
     validateInput: (value) => {
-      if (!value) {
-        return 'Endpoint is required';
-      }
+      if (!value) return 'Endpoint is required';
       if (!value.startsWith('http://') && !value.startsWith('https://')) {
         return 'Endpoint must start with http:// or https://';
       }
@@ -703,28 +629,17 @@ async function configureCustomProvider(
     },
   });
 
-  if (!endpoint) {
-    return;
-  }
+  if (!endpoint) return;
 
-  // Step 3: Enter model name
   const modelName = await vscode.window.showInputBox({
     prompt: 'Enter the model name to use',
     placeHolder: 'gpt-4o-mini, llama-3.1-70b, etc.',
     title: 'Step 3: Model Name',
-    validateInput: (value) => {
-      if (!value) {
-        return 'Model name is required';
-      }
-      return undefined;
-    },
+    validateInput: (value) => (!value ? 'Model name is required' : undefined),
   });
 
-  if (!modelName) {
-    return;
-  }
+  if (!modelName) return;
 
-  // Step 4: Enter API key (optional for some custom endpoints)
   const apiKey = await vscode.window.showInputBox({
     prompt: 'Enter API key (leave empty if not required)',
     password: true,
@@ -732,12 +647,8 @@ async function configureCustomProvider(
     title: 'Step 4: API Key (Optional)',
   });
 
-  // User cancelled
-  if (apiKey === undefined) {
-    return;
-  }
+  if (apiKey === undefined) return;
 
-  // Save all configuration
   await config.update('provider', 'custom', vscode.ConfigurationTarget.Global);
   await config.update('customEndpoint', endpoint, vscode.ConfigurationTarget.Global);
   await config.update('model', modelName, vscode.ConfigurationTarget.Global);
@@ -746,103 +657,109 @@ async function configureCustomProvider(
     await context.secrets.store('cmdify.custom', apiKey);
   }
 
-  // Reinitialize provider and update context
   aiProvider = await initializeAIProvider(context);
   await updateAIConfiguredContext(context);
   vscode.window.showInformationMessage(`AI configured: Custom provider with ${modelName}`);
 }
 
-interface ModelItem extends vscode.QuickPickItem {
-  value: string;
-}
+async function getModelsForProvider(provider: string): Promise<QuickPickItemWithValue[]> {
+  const modelConfigs: Record<string, QuickPickItemWithValue[]> = {
+    openai: [
+      { label: 'GPT-4o Mini', value: 'gpt-4o-mini', description: 'Recommended - Fast and cost-effective' },
+      { label: 'GPT-4o', value: 'gpt-4o', description: 'Most capable' },
+      { label: 'GPT-4 Turbo', value: 'gpt-4-turbo', description: 'Previous generation' },
+      { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo', description: 'Budget option' },
+    ],
+    anthropic: [
+      { label: 'Claude Sonnet 4', value: 'claude-sonnet-4-20250514', description: 'Recommended - Best balance' },
+      { label: 'Claude Haiku 3.5', value: 'claude-3-5-haiku-20241022', description: 'Fast and affordable' },
+      { label: 'Claude Opus 4', value: 'claude-opus-4-20250514', description: 'Most capable' },
+    ],
+    azure: [
+      { label: 'GPT-4o', value: 'gpt-4o', description: 'Azure-hosted GPT-4o' },
+      { label: 'GPT-4o Mini', value: 'gpt-4o-mini', description: 'Azure-hosted GPT-4o Mini' },
+      { label: 'GPT-4', value: 'gpt-4', description: 'Azure-hosted GPT-4' },
+    ],
+  };
 
-async function getModelsForProvider(provider: string, context: vscode.ExtensionContext): Promise<ModelItem[]> {
-  switch (provider) {
-    case 'openai':
-      return [
-        { label: 'GPT-4o Mini', value: 'gpt-4o-mini', description: 'Recommended - Fast and cost-effective' },
-        { label: 'GPT-4o', value: 'gpt-4o', description: 'Most capable' },
-        { label: 'GPT-4 Turbo', value: 'gpt-4-turbo', description: 'Previous generation' },
-        { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo', description: 'Budget option' },
-      ];
-    case 'anthropic':
-      return [
-        { label: 'Claude Sonnet 4', value: 'claude-sonnet-4-20250514', description: 'Recommended - Best balance' },
-        { label: 'Claude Haiku 3.5', value: 'claude-3-5-haiku-20241022', description: 'Fast and affordable' },
-        { label: 'Claude Opus 4', value: 'claude-opus-4-20250514', description: 'Most capable' },
-      ];
-    case 'ollama': {
-      // Try to fetch dynamic models from Ollama
-      const ollamaProvider = new OllamaProvider();
-      const models = await ollamaProvider.getAvailableModels();
-      return models.map(model => ({
-        label: model,
-        value: model,
-        description: model.includes('code') ? 'Optimized for code' : undefined,
-      }));
-    }
-    case 'azure':
-      return [
-        { label: 'GPT-4o', value: 'gpt-4o', description: 'Azure-hosted GPT-4o' },
-        { label: 'GPT-4o Mini', value: 'gpt-4o-mini', description: 'Azure-hosted GPT-4o Mini' },
-        { label: 'GPT-4', value: 'gpt-4', description: 'Azure-hosted GPT-4' },
-      ];
-    default:
-      return [];
+  if (provider === 'ollama') {
+    const ollamaProvider = new OllamaProvider();
+    const models = await ollamaProvider.getAvailableModels();
+    return models.map((model) => ({
+      label: model,
+      value: model,
+      description: model.includes('code') ? 'Optimized for code' : undefined,
+    }));
   }
+
+  return modelConfigs[provider] || [];
 }
 
-/**
- * Show about information
- */
+// =============================================================================
+// Utility Functions
+// =============================================================================
+
 async function handleAbout(): Promise<void> {
   const extension = vscode.extensions.getExtension('canhta.cmdify');
   const version = extension?.packageJSON?.version || 'unknown';
 
-  const message = `Cmdify v${version} - AI-powered CLI command manager\n\nDescribe what you want, get the shell command.`;
-
   const action = await vscode.window.showInformationMessage(
-    message,
+    `Cmdify v${version} - AI-powered CLI command manager\n\nDescribe what you want, get the shell command.`,
     'GitHub',
     'Sponsor',
     'Settings'
   );
 
-  switch (action) {
-    case 'GitHub':
-      vscode.env.openExternal(vscode.Uri.parse('https://github.com/canhta/cmdify'));
-      break;
-    case 'Sponsor':
-      vscode.env.openExternal(vscode.Uri.parse('https://ko-fi.com/canhta'));
-      break;
-    case 'Settings':
-      vscode.commands.executeCommand('workbench.action.openSettings', 'cmdify');
-      break;
+  const actions: Record<string, () => void> = {
+    GitHub: () => vscode.env.openExternal(vscode.Uri.parse('https://github.com/canhta/cmdify')),
+    Sponsor: () => vscode.env.openExternal(vscode.Uri.parse('https://ko-fi.com/canhta')),
+    Settings: () => vscode.commands.executeCommand('workbench.action.openSettings', 'cmdify'),
+  };
+
+  if (action) {
+    actions[action]?.();
   }
 }
 
-export function deactivate() {
+// =============================================================================
+// Disposables Management
+// =============================================================================
+
+function addDisposables(context: vscode.ExtensionContext): void {
+  context.subscriptions.push(
+    storage,
+    treeProvider,
+    focusService,
+    companionService,
+    focusStatusBarItem,
+    todoScannerService,
+    todoSyncService,
+    reminderService,
+    todoStatusBarItem,
+    activityService,
+    activityPanelProvider,
+    achievementService,
+    achievementPanelProvider
+  );
+
+  if (activityStatusBarItem) {
+    context.subscriptions.push(activityStatusBarItem);
+  }
+}
+
+export function deactivate(): void {
   disposeTerminal();
-  if (focusService) {
-    focusService.dispose();
-  }
-  if (companionService) {
-    companionService.dispose();
-  }
-  if (todoScannerService) {
-    todoScannerService.dispose();
-  }
-  if (todoSyncService) {
-    todoSyncService.dispose();
-  }
-  if (reminderService) {
-    reminderService.dispose();
-  }
-  if (activityService) {
-    activityService.dispose();
-  }
-  if (activityPanelProvider) {
-    activityPanelProvider.dispose();
-  }
+
+  const services = [
+    focusService,
+    companionService,
+    todoScannerService,
+    todoSyncService,
+    reminderService,
+    activityService,
+    activityPanelProvider,
+  ];
+
+  services.forEach((service) => service?.dispose());
 }
 

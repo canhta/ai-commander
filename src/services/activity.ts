@@ -485,6 +485,23 @@ export class ActivityService implements vscode.Disposable {
   }
 
   /**
+   * Check if daily goal bonus XP has already been awarded today
+   */
+  hasDailyGoalBonusAwarded(): boolean {
+    const key = `${ACTIVITY_STORAGE_KEYS.DAILY}.bonusAwarded`;
+    const awardedDate = this.context.globalState.get<string>(key);
+    return awardedDate === getTodayString();
+  }
+
+  /**
+   * Mark daily goal bonus as awarded for today
+   */
+  async markDailyGoalBonusAwarded(): Promise<void> {
+    const key = `${ACTIVITY_STORAGE_KEYS.DAILY}.bonusAwarded`;
+    await this.context.globalState.update(key, getTodayString());
+  }
+
+  /**
    * Clean up resources
    */
   dispose(): void {
