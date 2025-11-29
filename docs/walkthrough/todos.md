@@ -1,22 +1,20 @@
-# Track Your TODOs 📋
+# Track Your TODOs
 
-Cmdify automatically scans your workspace for TODO comments and helps you stay on top of them.
+Automatically scan your workspace for TODO comments.
 
-## Supported Keywords
+## Detected Keywords
 
-Cmdify detects these comment patterns:
-
-| Keyword | Purpose | Icon |
-|---------|---------|------|
-| `TODO` | Tasks to complete | 📝 |
-| `FIXME` | Bugs to fix | 🔧 |
-| `HACK` | Temporary solutions | ⚠️ |
-| `BUG` | Known issues | 🐛 |
+| Keyword | Purpose |
+|---------|---------|
+| `TODO` | Tasks to complete |
+| `FIXME` | Bugs to fix |
+| `HACK` | Temporary solutions |
+| `BUG` | Known issues |
 
 ## Example
 
 ```typescript
-// TODO: Add error handling for edge cases
+// TODO: Add error handling @tomorrow
 // FIXME: Memory leak in this function
 // HACK: Workaround for API limitation
 // BUG: Crashes when input is empty
@@ -24,16 +22,13 @@ Cmdify detects these comment patterns:
 
 ## Features
 
-- **Automatic Scanning:** TODOs are detected as you save files
-- **Quick Navigation:** Click to jump directly to the code
-- **Priority Sorting:** Grouped by type and urgency
-- **Reminders:** Set date reminders for important TODOs
-- **Mark Complete:** Check off TODOs when done
+- **Auto-scan** — Detects TODOs on file save
+- **Quick navigation** — Click to jump to code
+- **Reminders** — Add `@tomorrow`, `@next-week`, or `@2024-12-01`
+- **Mark complete** — Check off when done
 
 ## Status Bar
 
-The status bar shows your TODO count:
-- Click to open the TODO panel
-- See at a glance how many tasks remain
+Shows TODO count. Click to open the panel.
 
-> 💡 **Tip:** Completing TODOs earns XP for your companion!
+> **Tip:** Completing TODOs earns XP for your companion!

@@ -1,39 +1,35 @@
-# Create Your First Command ⌨️
+# Create Your First Command
 
-Save frequently used commands for quick access. No more looking up complex syntax!
+Save frequently used commands for quick access.
 
-## Two Ways to Create Commands
+## Two Ways to Create
 
-### 1. AI Generation (Recommended)
-Describe what you want in plain English:
-- "Kill process on port 3000"
-- "Create a new React component"
-- "Compress all images in current folder"
+**AI Generation** — Describe in plain English:
+- *"Kill process on port 3000"*
+- *"Compress all images in current folder"*
 
-### 2. Manual Entry
-Save any command you use often:
+**Manual Entry** — Save commands you use often:
 - `docker-compose up -d`
 - `git checkout -b feature/{{branch}}`
-- `npm run test -- --watch`
 
-## Using Variables
+## Variables
 
-Make your commands flexible with placeholders:
+Use `{{placeholder}}` for dynamic values:
 
 ```bash
 git checkout -b feature/{{branch}}
 ```
 
-Cmdify will prompt you to fill in `{{branch}}` when running the command.
+Cmdify prompts for values when you run the command.
 
 ## Organization
 
-- **Tags:** Group related commands (e.g., `git`, `docker`, `npm`)
-- **Favorites:** Star your most-used commands for quick access
-- **Search:** Find commands instantly with fuzzy search
+- **Tags** — Group by category (`git`, `docker`, `npm`)
+- **Favorites** — Star commands for quick access
+- **Search** — Find commands with fuzzy search
 
 ## Keyboard Shortcut
 
-Press `Cmd+Shift+C` (Mac) or `Ctrl+Shift+C` (Windows/Linux) to quickly create or run commands!
+`Cmd+Shift+C` (Mac) or `Ctrl+Shift+C` (Windows/Linux)
 
-> 💡 **Tip:** Sync your commands to GitHub Gist to access them on any machine.
+> **Tip:** Sync commands to GitHub Gist for cross-machine access.

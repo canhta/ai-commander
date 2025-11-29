@@ -1,96 +1,70 @@
+<div align="center">
+
 # Cmdify
 
-AI-powered CLI command manager for VS Code. Describe what you want, get the command.
+**AI-powered CLI command manager for VS Code**
 
-## Features
+Describe what you want in plain English. Get the shell command instantly.
 
-### Command Management
-- **AI Command Generation** - Describe in plain English, get shell commands
-- **Smart Detection** - Auto-detects if input is natural language or a command
-- **Multiple AI Providers** - OpenAI, Anthropic Claude, Ollama, Azure OpenAI, or custom endpoints
-- **Command Library** - Save, organize, and reuse commands with tags
-- **Variable Support** - Use `{{variable}}` syntax for dynamic commands
-- **Safety Warnings** - Alerts before running destructive commands
-- **GitHub Sync** - Sync commands across machines via Gist
+[![Version](https://img.shields.io/visual-studio-marketplace/v/canhta.cmdify?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=canhta.cmdify)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/canhta.cmdify?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=canhta.cmdify)
+[![License](https://img.shields.io/github/license/canhta/cmdify?style=flat-square)](LICENSE)
 
-### Focus Timer
-- **Pomodoro Technique** - Built-in focus timer with customizable work/break durations
-- **Animated Companions** - Pixel art companions (cat, dog, robot, plant, flame) that react to your focus state
-- **Session Tracking** - Track completed sessions and maintain daily streaks
-- **Status Bar Integration** - Quick access to timer controls from the status bar
+</div>
 
-### TODO Scanner & Reminders
-- **Workspace Scanning** - Automatically finds TODO, FIXME, HACK, BUG comments in your code
-- **Due Date Tracking** - Use `@2024-12-01`, `@tomorrow`, `@next-week` in comments to set deadlines
-- **Organized View** - Sidebar groups TODOs by Overdue, Today, This Week, and No Date
-- **Two-Way Sync** - Adding reminders updates your code comments automatically
-- **Notifications** - Get reminded when TODOs are due with snooze options
-- **Global Reminders** - Create reminders not tied to specific code
+---
 
 ## Quick Start
 
 1. Press `Cmd+Shift+C` (Mac) or `Ctrl+Shift+C` (Windows/Linux)
-2. Type what you want to do: *"delete all merged git branches"*
-3. Review the generated command and save or run it
+2. Type what you want: *"delete all merged git branches"*
+3. Review and run the generated command
 
-## Commands
+## Features
 
-| Command | Description |
-|---------|-------------|
-| `Cmdify: Create Command` | Create via AI or manual entry |
-| `Cmdify: Run Command` | Execute a saved command |
-| `Cmdify: Search Commands` | Find and run commands |
-| `Cmdify: Configure AI Provider` | Set up OpenAI/Anthropic/Ollama |
-| `Cmdify: Sync Commands` | Sync with GitHub Gist |
-| `Cmdify Focus: Start Focus Session` | Start a focus timer session |
-| `Cmdify Focus: Pause Focus Session` | Pause the current session |
-| `Cmdify Focus: Stop Focus Session` | Stop and reset the timer |
-| `Cmdify TODOs: Scan Workspace` | Scan workspace for TODO comments |
-| `Cmdify TODOs: Add Reminder` | Create a global reminder |
-| `Cmdify TODOs: Set Reminder` | Set a due date on a TODO |
+**🤖 AI Command Generation**  
+Supports OpenAI, Anthropic Claude, Ollama (local/free), Azure OpenAI, and custom endpoints.
 
-## Settings
+**📚 Command Library**  
+Save, organize with tags, and reuse commands. Sync across machines via GitHub Gist.
 
-### AI Settings
-| Setting | Description | Default |
-|---------|-------------|--------|
-| `cmdify.ai.provider` | AI provider (openai/anthropic/ollama/azure/custom) | `openai` |
-| `cmdify.ai.model` | Model to use | `gpt-4o-mini` |
-| `cmdify.execution.confirmDestructive` | Warn on dangerous commands | `true` |
-| `cmdify.view.groupBy` | Group commands by tags/source/none | `none` |
-| `cmdify.sync.enabled` | Enable GitHub sync | `false` |
+**⏱️ Focus Timer**  
+Pomodoro timer with animated companions, session tracking, and streak counter.
 
-### Focus Timer Settings
-| Setting | Description | Default |
-|---------|-------------|--------|
-| `cmdify.focus.focusDuration` | Focus session duration (minutes) | `25` |
-| `cmdify.focus.shortBreakDuration` | Short break duration (minutes) | `5` |
-| `cmdify.focus.longBreakDuration` | Long break duration (minutes) | `15` |
-| `cmdify.focus.sessionsBeforeLongBreak` | Sessions before long break | `4` |
-| `cmdify.focus.companionType` | Companion character | `robot` |
-
-### TODO Scanner Settings
-| Setting | Description | Default |
-|---------|-------------|--------|
-| `cmdify.todos.includePatterns` | File patterns to scan | `**/*.ts`, `**/*.js`, etc. |
-| `cmdify.todos.excludePatterns` | Patterns to exclude | `**/node_modules/**`, etc. |
-| `cmdify.todos.scanOnSave` | Auto-scan on file save | `true` |
-| `cmdify.todos.customPatterns` | Custom regex patterns | `[]` |
+**📋 TODO Scanner**  
+Auto-detects `TODO`, `FIXME`, `HACK` comments. Set reminders with `@tomorrow` or `@2024-12-01`.
 
 ## AI Provider Setup
 
-1. Run `Cmdify: Configure AI Provider`
+1. Run `Cmdify: Configure AI Provider` from Command Palette
 2. Select your provider and enter API key
 3. Choose a model
 
-**Ollama** runs locally - no API key needed.
+> 💡 **Ollama** runs locally — no API key needed!
 
-## Support
+## Key Commands
 
-If you find Cmdify helpful, consider supporting its development:
+| Command | Description |
+|---------|-------------|
+| `Cmdify: Create Command` | Generate command from natural language |
+| `Cmdify: Run Command` | Execute a saved command |
+| `Cmdify: Sync Commands` | Sync with GitHub Gist |
+| `Cmdify Focus: Start` | Start focus timer |
+| `Cmdify TODOs: Scan` | Scan workspace for TODOs |
 
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Me-ff5f5f?logo=ko-fi&logoColor=white)](https://ko-fi.com/canhta)
+## Settings
 
-## License
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `cmdify.ai.provider` | AI provider | `openai` |
+| `cmdify.ai.model` | Model to use | `gpt-4o-mini` |
+| `cmdify.focus.focusDuration` | Focus duration (min) | `25` |
+| `cmdify.todos.scanOnSave` | Auto-scan on save | `true` |
 
-MIT
+---
+
+<div align="center">
+
+**[Documentation](https://github.com/canhta/cmdify#readme)** · **[Report Issue](https://github.com/canhta/cmdify/issues)** · **[Support on Ko-fi](https://ko-fi.com/canhta)**
+
+</div>

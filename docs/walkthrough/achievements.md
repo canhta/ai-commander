@@ -1,46 +1,32 @@
-# Earn Achievements 🏆
+# Earn Achievements
 
-Level up your companion and unlock rewards by using Cmdify!
+Unlock rewards and level up your companion.
 
-## Achievement Categories
+## Categories
 
-### 🎯 Focus
-Complete focus sessions to earn these badges:
-- **First Focus** - Complete 1 session
-- **Getting Focused** - Complete 10 sessions
-- **Focus Master** - Complete 50 sessions
-- **Centurion** - Complete 100 sessions
+**Focus** — Complete focus sessions
+- First Focus (1) → Getting Focused (10) → Focus Master (50) → Centurion (100)
 
-### 🔥 Streaks
-Build consistency with streak achievements:
-- **Getting Started** - 3-day streak
-- **Week Warrior** - 7-day streak
-- **Monthly Master** - 30-day streak
-- **Legendary** - 100-day streak
+**Streaks** — Build consistency
+- 3-day → 7-day → 30-day → 100-day
 
-### ✅ TODOs
-Complete tasks in your codebase:
-- **Task Tamer** - Complete 1 TODO
-- **Task Tackler** - Complete 25 TODOs
-- **TODO Terminator** - Complete 100 TODOs
+**TODOs** — Complete tasks
+- Task Tamer (1) → Task Tackler (25) → TODO Terminator (100)
 
-### ⌨️ Commands
-Build your command library:
-- **Command Creator** - Create 1 command
-- **Command Collector** - Save 10 commands
-- **AI Whisperer** - Generate 10 AI commands
+**Commands** — Build your library
+- Command Creator (1) → Command Collector (10) → AI Whisperer (10 AI commands)
 
-### 🌟 Secret Achievements
-Hidden challenges to discover:
-- **Night Owl** - Code after midnight
-- **Early Bird** - Start before 6 AM
-- **Weekend Warrior** - Code on both weekend days
+**Secret** — Hidden challenges
+- Night Owl, Early Bird, Weekend Warrior, and more...
 
-## XP System
+## XP Rewards
 
-Every achievement grants XP to level up your companion:
-- 🏆 Achievements grant 25-2000 XP
-- 📈 Higher levels unlock new companions and accessories
-- ⭐ Rare achievements give bonus rewards
+| Achievement Tier | XP |
+|------------------|----|
+| Common | 25-100 |
+| Rare | 200-500 |
+| Legendary | 1000-2000 |
 
-> 💡 **Tip:** Secret achievements are revealed when you unlock them!
+Higher levels unlock new companions and accessories.
+
+> **Tip:** Secret achievements are revealed when unlocked!

@@ -1,36 +1,35 @@
-# Meet Your Companion 🤖
+# Meet Your Companion
 
-Your companion is here to keep you company and help you stay focused during coding sessions!
+Stay focused with an animated companion and built-in Pomodoro timer.
 
-## Focus Timer (Pomodoro)
+## Focus Timer
 
-Cmdify includes a built-in Pomodoro timer:
+| Phase | Duration |
+|-------|----------|
+| Focus | 25 min |
+| Short Break | 5 min |
+| Long Break | 15 min (after 4 sessions) |
 
-- **🍅 Focus Session:** 25 minutes of focused work
-- **☕ Short Break:** 5 minutes to rest
-- **🌴 Long Break:** 15 minutes after 4 sessions
+## Unlockable Companions
 
-## Companions
+| Companion | Unlock Requirement |
+|-----------|--------------------|
+| Robot | Default |
+| Cat | 10 focus sessions |
+| Dog | 25 focus sessions |
+| Plant | 7-day streak |
+| Flame | 30-day streak |
+| Fox | 50 TODOs completed |
+| Owl | Code after midnight (5x) |
+| Panda | 100-day streak |
 
-Start with the Robot companion, and unlock more as you use Cmdify:
+## Earning XP
 
-| Companion | How to Unlock |
-|-----------|---------------|
-| 🤖 Robot | Default |
-| 🐱 Cat | Complete 10 focus sessions |
-| 🐕 Dog | Complete 25 focus sessions |
-| 🌱 Plant | Achieve a 7-day streak |
-| 🔥 Flame | Achieve a 30-day streak |
-| 🦊 Fox | Complete 50 TODOs |
-| 🦉 Owl | Code after midnight (5 times) |
-| 🐼 Panda | 100-day streak (legendary!) |
+| Action | XP |
+|--------|----|
+| Complete focus session | +100 |
+| Take a break | +25 |
+| Complete TODO | +50 |
+| Reach daily goal | +200 |
 
-## Companion Progression
-
-Your companion levels up as you:
-- Complete focus sessions (+100 XP)
-- Take breaks (+25 XP)
-- Complete TODOs (+50 XP)
-- Reach daily goals (+200 XP)
-
-> 💡 **Tip:** Click on your companion in the sidebar to start a focus session!
+> **Tip:** Click your companion in the sidebar to start a session.

@@ -1,30 +1,30 @@
-# Set Up AI Command Generation 🤖
+# Set Up AI Command Generation
 
-Cmdify uses AI to generate CLI commands from natural language descriptions. Just describe what you want to do, and get the exact command!
+Generate CLI commands from natural language. Describe what you want, get the command.
 
 ## Supported Providers
 
-| Provider | Models | Notes |
-|----------|--------|-------|
-| **OpenAI** | GPT-4o, GPT-4o-mini | Fast and reliable |
-| **Anthropic** | Claude 3.5 Sonnet | Great for complex commands |
-| **Ollama** | Local models | Free, runs on your machine |
-| **Azure OpenAI** | Enterprise deployment | For organizations |
+| Provider | Best For |
+|----------|----------|
+| **OpenAI** | Fast, reliable (GPT-4o, GPT-4o-mini) |
+| **Anthropic** | Complex commands (Claude 3.5 Sonnet) |
+| **Ollama** | Free, local — no API key needed |
+| **Azure OpenAI** | Enterprise environments |
 
-## Quick Start
+## Setup
 
-1. Click **Configure AI Provider** above
-2. Choose your preferred provider
-3. Enter your API key (or start Ollama locally)
-4. Start generating commands!
+1. Open Command Palette (`Cmd/Ctrl+Shift+P`)
+2. Run **Cmdify: Configure AI Provider**
+3. Select provider and enter API key
+4. Choose a model
 
 ## Example
 
-**You say:** "Find all TypeScript files modified in the last week"
+**Input:** *"Find all TypeScript files modified in the last week"*
 
-**Cmdify generates:**
+**Output:**
 ```bash
 find . -name "*.ts" -mtime -7
 ```
 
-> 💡 **Tip:** You can always change your AI provider in Settings → Cmdify → AI
+> **Tip:** Change provider anytime in Settings → Cmdify → AI
