@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { DetectedTodo, DATE_PATTERN } from '../models/todo';
+import { DetectedTodo, DEFAULT_METADATA_FORMAT } from '../models/todo';
 import { formatDateString } from '../utils/dateUtils';
 import { TodoScannerService } from './todoScanner';
 
@@ -21,6 +21,100 @@ export class TodoSyncService implements vscode.Disposable {
   ) {}
 
   /**
+   * Get patterns from scanner (which loads from config)
+   */
+  private getPatterns() {
+    return this.scanner.getMetadataPatterns();
+  }
+
+  /**
+   * Get format config from scanner
+   */
+  private getFormat() {
+    return this.scanner.getMetadataFormat();
+  }
+
+  /**
+   * Parse existing metadata from a line
+   * Returns { dueDate, assignee } from format like (due@2025-11-30, @assigned:John)
+   */
+  private parseMetadata(lineText: string): { dueDate?: string; assignee?: string } {
+    const patterns = this.getPatterns();
+    const metadataMatch = patterns.metadataPattern.exec(lineText);
+    if (!metadataMatch) {
+      return {};
+    }
+
+    const metadataContent = metadataMatch[1];
+    let dueDate: string | undefined;
+    let assignee: string | undefined;
+
+    // Parse due date
+    const dateMatch = patterns.datePattern.exec(metadataContent);
+    if (dateMatch) {
+      dueDate = dateMatch[1];
+    }
+
+    // Parse assignee
+    const assigneeMatch = patterns.assigneePattern.exec(metadataContent);
+    if (assigneeMatch) {
+      assignee = assigneeMatch[1].trim();
+    }
+
+    return { dueDate, assignee };
+  }
+
+  /**
+   * Build metadata string based on configured format
+   */
+  private buildMetadataString(dueDate?: string, assignee?: string): string {
+    const format = this.getFormat();
+    const parts: string[] = [];
+    
+    if (dueDate) {
+      // Extract the prefix from datePattern (e.g., "due@" from "due@(\\d{4}-\\d{2}-\\d{2})")
+      const datePrefix = format.datePattern.replace(/\(.*\)/, '').replace(/\\/g, '');
+      parts.push(`${datePrefix}${dueDate}`);
+    }
+    
+    if (assignee) {
+      // Extract the prefix from assigneePattern (e.g., "@assigned:" from "@assigned:([^,)]+)")
+      const assigneePrefix = format.assigneePattern.replace(/\(.*\)/, '').replace(/\\/g, '');
+      parts.push(`${assigneePrefix}${assignee}`);
+    }
+
+    if (parts.length === 0) {
+      return '';
+    }
+
+    // Build using configured wrapper format
+    const metadataContent = parts.join(format.dateSeparator);
+    const result = format.metadataWrapper.replace('{metadata}', metadataContent);
+    return ` ${result}`;
+  }
+
+  /**
+   * Update or add metadata to a TODO line
+   */
+  private updateLineMetadata(lineText: string, newDueDate?: string, newAssignee?: string): string {
+    const patterns = this.getPatterns();
+    
+    // Parse existing metadata
+    const existing = this.parseMetadata(lineText);
+    
+    // Merge with new values (new values override existing)
+    const dueDate = newDueDate !== undefined ? newDueDate : existing.dueDate;
+    const assignee = newAssignee !== undefined ? newAssignee : existing.assignee;
+
+    // Remove existing metadata
+    let cleanLine = lineText.replace(patterns.metadataPattern, '').trimEnd();
+
+    // Add new metadata
+    const metadata = this.buildMetadataString(dueDate, assignee);
+    return cleanLine + metadata;
+  }
+
+  /**
    * Add a due date to a TODO comment in code
    */
   async addReminder(todo: DetectedTodo, dueDate: Date): Promise<boolean> {
@@ -31,31 +125,9 @@ export class TodoSyncService implements vscode.Disposable {
 
       // Format date
       const dateStr = formatDateString(dueDate);
-      let newText: string;
-
-      // Check if already has a date
-      if (DATE_PATTERN.test(lineText)) {
-        // Replace existing date
-        newText = lineText.replace(DATE_PATTERN, `@${dateStr}`);
-      } else {
-        // Add date after the TODO type
-        // Match patterns like "// TODO:", "// TODO :", "# TODO:", etc.
-        const typePattern = new RegExp(
-          `((?:\\/\\/|#|<!--)\\s*(?:TODO|FIXME|HACK|XXX|BUG|OPTIMIZE|REVIEW))\\s*(:?)\\s*`,
-          'i'
-        );
-        
-        const match = typePattern.exec(lineText);
-        if (match) {
-          const prefix = lineText.substring(0, match.index + match[0].length);
-          const suffix = lineText.substring(match.index + match[0].length);
-          // Insert (@date) after TODO type
-          newText = `${prefix.trimEnd()}(@${dateStr}): ${suffix.trim()}`;
-        } else {
-          // Fallback: append date at the end
-          newText = `${lineText.trimEnd()} @${dateStr}`;
-        }
-      }
+      
+      // Update line with new metadata
+      const newText = this.updateLineMetadata(lineText, dateStr, undefined);
 
       // Apply edit
       const edit = new vscode.WorkspaceEdit();
@@ -63,9 +135,7 @@ export class TodoSyncService implements vscode.Disposable {
       const success = await vscode.workspace.applyEdit(edit);
 
       if (success) {
-        // Save the document
         await document.save();
-        // Rescan the file
         await this.scanner.scanFile(document.uri);
       }
 
@@ -85,19 +155,22 @@ export class TodoSyncService implements vscode.Disposable {
       const document = await vscode.workspace.openTextDocument(todo.filePath);
       const line = document.lineAt(todo.lineNumber);
       const lineText = line.text;
+      const patterns = this.getPatterns();
 
-      // Remove date pattern including parentheses if present
-      let newText = lineText
-        .replace(/\(@\d{4}-\d{2}-\d{2}\)/g, '')
-        .replace(/\(@(?:today|tomorrow|next-week|next-month)\)/gi, '')
-        .replace(/@\d{4}-\d{2}-\d{2}/g, '')
-        .replace(/@(?:today|tomorrow|next-week|next-month)/gi, '')
-        .replace(/\s+:/g, ':')  // Clean up extra spaces before colon
-        .replace(/:\s+/g, ': '); // Normalize space after colon
+      // Get existing metadata
+      const existing = this.parseMetadata(lineText);
+      
+      // Remove existing metadata and rebuild without due date
+      let cleanLine = lineText.replace(patterns.metadataPattern, '').trimEnd();
+      
+      // Re-add assignee if it existed
+      if (existing.assignee) {
+        cleanLine += this.buildMetadataString(undefined, existing.assignee);
+      }
 
       // Apply edit
       const edit = new vscode.WorkspaceEdit();
-      edit.replace(document.uri, line.range, newText);
+      edit.replace(document.uri, line.range, cleanLine);
       const success = await vscode.workspace.applyEdit(edit);
 
       if (success) {
@@ -200,6 +273,103 @@ export class TodoSyncService implements vscode.Disposable {
     } catch (error) {
       console.error('Error navigating to TODO:', error);
       vscode.window.showErrorMessage(`Failed to open file: ${todo.filePath}`);
+    }
+  }
+
+  /**
+   * Add an assignee to a TODO comment in code
+   */
+  async addAssignee(todo: DetectedTodo, assignee: string): Promise<boolean> {
+    try {
+      const document = await vscode.workspace.openTextDocument(todo.filePath);
+      const line = document.lineAt(todo.lineNumber);
+      const lineText = line.text;
+
+      // Update line with new assignee (passing empty string for dueDate to preserve existing)
+      const newText = this.updateLineMetadata(lineText, undefined, assignee);
+
+      // Apply edit
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(document.uri, line.range, newText);
+      const success = await vscode.workspace.applyEdit(edit);
+
+      if (success) {
+        await document.save();
+        await this.scanner.scanFile(document.uri);
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Error adding assignee to TODO:', error);
+      vscode.window.showErrorMessage(`Failed to add assignee: ${error}`);
+      return false;
+    }
+  }
+
+  /**
+   * Remove the assignee from a TODO comment
+   */
+  async removeAssignee(todo: DetectedTodo): Promise<boolean> {
+    try {
+      const document = await vscode.workspace.openTextDocument(todo.filePath);
+      const line = document.lineAt(todo.lineNumber);
+      const lineText = line.text;
+      const patterns = this.getPatterns();
+
+      // Get existing metadata
+      const existing = this.parseMetadata(lineText);
+      
+      // Remove existing metadata and rebuild without assignee
+      let cleanLine = lineText.replace(patterns.metadataPattern, '').trimEnd();
+      
+      // Re-add due date if it existed
+      if (existing.dueDate) {
+        cleanLine += this.buildMetadataString(existing.dueDate, undefined);
+      }
+
+      // Apply edit
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(document.uri, line.range, cleanLine);
+      const success = await vscode.workspace.applyEdit(edit);
+
+      if (success) {
+        await document.save();
+        await this.scanner.scanFile(document.uri);
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Error removing assignee from TODO:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update both due date and assignee at once
+   */
+  async updateMetadata(todo: DetectedTodo, dueDate?: Date, assignee?: string): Promise<boolean> {
+    try {
+      const document = await vscode.workspace.openTextDocument(todo.filePath);
+      const line = document.lineAt(todo.lineNumber);
+      const lineText = line.text;
+
+      const dateStr = dueDate ? formatDateString(dueDate) : undefined;
+      const newText = this.updateLineMetadata(lineText, dateStr, assignee);
+
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(document.uri, line.range, newText);
+      const success = await vscode.workspace.applyEdit(edit);
+
+      if (success) {
+        await document.save();
+        await this.scanner.scanFile(document.uri);
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Error updating TODO metadata:', error);
+      vscode.window.showErrorMessage(`Failed to update TODO: ${error}`);
+      return false;
     }
   }
 

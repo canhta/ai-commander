@@ -12,7 +12,7 @@ import {
   StoredTodoMeta,
   DEFAULT_TODO_PATTERNS,
   DEFAULT_SCANNER_CONFIG,
-  DATE_PATTERN,
+  DEFAULT_METADATA_FORMAT,
   inferPriorityFromType,
 } from '../models/todo';
 import { parseDueDateString } from '../utils/dateUtils';
@@ -28,6 +28,11 @@ export class TodoScannerService implements vscode.Disposable {
   private config: TodoScannerConfig;
   private customPatterns: TodoPattern[] = [];
   private disposables: vscode.Disposable[] = [];
+  
+  // Compiled regex patterns from config
+  private datePattern: RegExp;
+  private assigneePattern: RegExp;
+  private metadataPattern: RegExp;
 
   // Event emitters
   private readonly _onTodosChanged = new vscode.EventEmitter<DetectedTodo[]>();
@@ -44,6 +49,9 @@ export class TodoScannerService implements vscode.Disposable {
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.config = this.loadConfig();
+    this.datePattern = this.compilePattern(this.config.metadataFormat.datePattern);
+    this.assigneePattern = this.compilePattern(this.config.metadataFormat.assigneePattern);
+    this.metadataPattern = this.buildMetadataPattern();
     this.loadStoredMeta();
     this.parseCustomPatterns();
 
@@ -52,6 +60,9 @@ export class TodoScannerService implements vscode.Disposable {
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('cmdify.todos')) {
           this.config = this.loadConfig();
+          this.datePattern = this.compilePattern(this.config.metadataFormat.datePattern);
+          this.assigneePattern = this.compilePattern(this.config.metadataFormat.assigneePattern);
+          this.metadataPattern = this.buildMetadataPattern();
           this.parseCustomPatterns();
         }
       })
@@ -81,12 +92,62 @@ export class TodoScannerService implements vscode.Disposable {
    */
   private loadConfig(): TodoScannerConfig {
     const config = vscode.workspace.getConfiguration('cmdify.todos');
+    const metadataConfig = config.get<typeof DEFAULT_METADATA_FORMAT>('metadataFormat', DEFAULT_METADATA_FORMAT);
     return {
       includePatterns: config.get<string[]>('includePatterns', DEFAULT_SCANNER_CONFIG.includePatterns),
       excludePatterns: config.get<string[]>('excludePatterns', DEFAULT_SCANNER_CONFIG.excludePatterns),
       scanOnSave: config.get<boolean>('scanOnSave', DEFAULT_SCANNER_CONFIG.scanOnSave),
       customPatterns: config.get<string[]>('customPatterns', DEFAULT_SCANNER_CONFIG.customPatterns),
+      metadataFormat: {
+        datePattern: metadataConfig.datePattern || DEFAULT_METADATA_FORMAT.datePattern,
+        assigneePattern: metadataConfig.assigneePattern || DEFAULT_METADATA_FORMAT.assigneePattern,
+        metadataWrapper: metadataConfig.metadataWrapper || DEFAULT_METADATA_FORMAT.metadataWrapper,
+        dateSeparator: metadataConfig.dateSeparator || DEFAULT_METADATA_FORMAT.dateSeparator,
+      },
     };
+  }
+
+  /**
+   * Compile a regex pattern from string
+   */
+  private compilePattern(pattern: string): RegExp {
+    try {
+      return new RegExp(pattern, 'i');
+    } catch (e) {
+      console.warn(`Invalid regex pattern: ${pattern}, using default`);
+      return new RegExp(DEFAULT_METADATA_FORMAT.datePattern, 'i');
+    }
+  }
+
+  /**
+   * Build the metadata wrapper pattern from config
+   * e.g., "({metadata})" becomes /\s*\(([^)]+)\)\s*$/
+   */
+  private buildMetadataPattern(): RegExp {
+    const wrapper = this.config.metadataFormat.metadataWrapper;
+    // Replace {metadata} with capture group
+    const escaped = wrapper
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')  // Escape special chars
+      .replace('\\{metadata\\}', '([^)]+)');    // Replace placeholder with capture
+    return new RegExp(`\\s*${escaped}\\s*$`);
+  }
+
+  /**
+   * Get the compiled patterns for external use
+   */
+  getMetadataPatterns(): { datePattern: RegExp; assigneePattern: RegExp; metadataPattern: RegExp } {
+    return {
+      datePattern: this.datePattern,
+      assigneePattern: this.assigneePattern,
+      metadataPattern: this.metadataPattern,
+    };
+  }
+
+  /**
+   * Get metadata format config for sync service
+   */
+  getMetadataFormat(): typeof DEFAULT_METADATA_FORMAT {
+    return this.config.metadataFormat;
   }
 
   /**
@@ -241,17 +302,40 @@ export class TodoScannerService implements vscode.Disposable {
             const description = match[2]?.trim() || match[0];
             const fullText = match[0];
 
-            // Check for date pattern
+            // Check for metadata block at end: (due@date, @assigned:name)
             let dueDate: Date | undefined;
             let dueDateRaw: string | undefined;
-            const dateMatch = DATE_PATTERN.exec(description);
-            if (dateMatch) {
-              dueDateRaw = dateMatch[1];
-              dueDate = parseDueDateString(dueDateRaw);
+            let assignee: string | undefined;
+
+            // First try to parse from metadata block using configured patterns
+            const metadataMatch = this.metadataPattern.exec(description);
+            if (metadataMatch) {
+              const metadataContent = metadataMatch[1];
+              
+              // Parse due date from metadata
+              const dateMatch = this.datePattern.exec(metadataContent);
+              if (dateMatch && dateMatch[1]) {
+                dueDateRaw = dateMatch[1];
+                dueDate = parseDueDateString(dueDateRaw);
+              }
+
+              // Parse assignee from metadata
+              const assigneeMatch = this.assigneePattern.exec(metadataContent);
+              if (assigneeMatch) {
+                assignee = assigneeMatch[1].trim();
+              }
             }
 
             const id = this.generateId(uri.fsPath, lineNum);
             const storedMeta = this.storedMeta.get(id);
+
+            // Use stored assignee if not found in code
+            const finalAssignee = assignee || storedMeta?.assignee;
+
+            // Clean description by removing metadata block
+            const cleanDescription = description
+              .replace(this.metadataPattern, '')
+              .trim();
 
             const todo: DetectedTodo = {
               id,
@@ -259,9 +343,10 @@ export class TodoScannerService implements vscode.Disposable {
               lineNumber: lineNum,
               type: todoType,
               text: fullText,
-              description: description.replace(DATE_PATTERN, '').trim(),
+              description: cleanDescription,
               dueDate,
               dueDateRaw,
+              assignee: finalAssignee,
               priority: inferPriorityFromType(todoType),
               status: storedMeta?.status || 'open',
               createdAt: storedMeta?.createdAt ? new Date(storedMeta.createdAt) : new Date(),
@@ -472,6 +557,27 @@ export class TodoScannerService implements vscode.Disposable {
       };
       meta.status = 'snoozed';
       meta.snoozedUntil = until.toISOString();
+      this.storedMeta.set(id, meta);
+
+      await this.saveStoredMeta();
+      this._onTodosChanged.fire(this.getTodos());
+    }
+  }
+
+  /**
+   * Set assignee for a TODO
+   */
+  async setAssignee(id: string, assignee: string | undefined): Promise<void> {
+    const todo = this.todos.get(id);
+    if (todo) {
+      todo.assignee = assignee;
+
+      const meta = this.storedMeta.get(id) || {
+        id,
+        status: 'open',
+        createdAt: new Date().toISOString(),
+      };
+      meta.assignee = assignee;
       this.storedMeta.set(id, meta);
 
       await this.saveStoredMeta();

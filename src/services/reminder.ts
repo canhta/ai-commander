@@ -8,6 +8,7 @@ import { DetectedTodo, GlobalReminder } from '../models/todo';
 import { TodoScannerService } from './todoScanner';
 import { TodoSyncService } from './todoSync';
 import { formatRelativeTime } from '../utils/dateUtils';
+import { getGitContributorService } from './gitContributor';
 
 const REMINDERS_KEY = 'cmdify.reminders.global';
 const CHECK_INTERVAL = 60000; // Check every minute
@@ -386,76 +387,193 @@ export class ReminderService implements vscode.Disposable {
   }
 
   /**
-   * Set reminder for a TODO interactively
+   * Edit TODO metadata (due date and assignee) in a single quick pick
    */
-  async setTodoReminderInteractive(todo: DetectedTodo): Promise<boolean> {
-    const dateOptions: vscode.QuickPickItem[] = [
-      { label: '$(calendar) Today', description: 'Due today' },
-      { label: '$(arrow-right) Tomorrow', description: 'Due tomorrow' },
-      { label: '$(calendar) Next week', description: 'Due next week' },
-      { label: '$(calendar) Next month', description: 'Due next month' },
-      { label: '$(edit) Custom date', description: 'Pick a specific date' },
+  async editTodoInteractive(todo: DetectedTodo): Promise<boolean> {
+    const gitService = getGitContributorService();
+    
+    // Fetch contributors in background
+    const contributors = await gitService.getContributors();
+
+    // Build current status display
+    const currentDue = todo.dueDate ? todo.dueDate.toLocaleDateString() : 'Not set';
+    const currentAssignee = todo.assignee || 'Unassigned';
+
+    // Create quick pick with all options
+    const quickPick = vscode.window.createQuickPick();
+    quickPick.title = 'Edit TODO';
+    quickPick.placeholder = `Current: Due ${currentDue} | ${currentAssignee}`;
+
+    // Build items
+    const items: vscode.QuickPickItem[] = [
+      // Due date section
+      { label: 'Due Date', kind: vscode.QuickPickItemKind.Separator },
+      { label: '$(calendar) Today', description: this.formatDate(0) },
+      { label: '$(arrow-right) Tomorrow', description: this.formatDate(1) },
+      { label: '$(calendar) In 3 days', description: this.formatDate(3) },
+      { label: '$(calendar) Next week', description: this.formatDate(7) },
+      { label: '$(calendar) In 2 weeks', description: this.formatDate(14) },
+      { label: '$(calendar) Next month', description: this.formatDate(30) },
+      { label: '$(edit) Custom date...', description: 'Enter a specific date' },
+      { label: '$(close) Clear due date', description: 'Remove due date' },
+      
+      // Assignee section
+      { label: 'Assign To', kind: vscode.QuickPickItemKind.Separator },
+      { label: '$(edit) Enter name...', description: 'Type a custom name' },
+      { label: '$(close) Unassign', description: 'Remove assignee' },
     ];
 
-    const dateChoice = await vscode.window.showQuickPick(dateOptions, {
-      placeHolder: 'When is this TODO due?',
-    });
+    // Add contributors
+    if (contributors.length > 0) {
+      items.push({ label: 'Contributors', kind: vscode.QuickPickItemKind.Separator });
+      for (const c of contributors.slice(0, 10)) { // Limit to top 10
+        items.push({
+          label: `$(person) ${c.name}`,
+          description: c.email,
+          detail: `${c.commits} commits`,
+        });
+      }
+    }
 
-    if (!dateChoice) {
+    quickPick.items = items;
+    quickPick.matchOnDescription = true;
+
+    return new Promise((resolve) => {
+      quickPick.onDidAccept(async () => {
+        const selected = quickPick.selectedItems[0];
+        if (!selected) {
+          quickPick.hide();
+          resolve(false);
+          return;
+        }
+
+        quickPick.hide();
+        const success = await this.handleQuickPickSelection(todo, selected.label);
+        resolve(success);
+      });
+
+      quickPick.onDidHide(() => {
+        quickPick.dispose();
+      });
+
+      quickPick.show();
+    });
+  }
+
+  /**
+   * Format a date offset for display
+   */
+  private formatDate(daysFromNow: number): string {
+    const date = new Date();
+    date.setDate(date.getDate() + daysFromNow);
+    return date.toLocaleDateString();
+  }
+
+  /**
+   * Handle quick pick selection
+   */
+  private async handleQuickPickSelection(todo: DetectedTodo, label: string): Promise<boolean> {
+    const now = new Date();
+    let dueAt: Date | undefined;
+    let assignee: string | undefined;
+    let clearDue = false;
+    let clearAssignee = false;
+
+    // Handle due date options
+    if (label === '$(calendar) Today') {
+      dueAt = new Date(now);
+    } else if (label === '$(arrow-right) Tomorrow') {
+      dueAt = new Date(now);
+      dueAt.setDate(dueAt.getDate() + 1);
+    } else if (label === '$(calendar) In 3 days') {
+      dueAt = new Date(now);
+      dueAt.setDate(dueAt.getDate() + 3);
+    } else if (label === '$(calendar) Next week') {
+      dueAt = new Date(now);
+      dueAt.setDate(dueAt.getDate() + 7);
+    } else if (label === '$(calendar) In 2 weeks') {
+      dueAt = new Date(now);
+      dueAt.setDate(dueAt.getDate() + 14);
+    } else if (label === '$(calendar) Next month') {
+      dueAt = new Date(now);
+      dueAt.setMonth(dueAt.getMonth() + 1);
+    } else if (label === '$(edit) Custom date...') {
+      const dateStr = await vscode.window.showInputBox({
+        prompt: 'Enter date (YYYY-MM-DD)',
+        placeHolder: 'YYYY-MM-DD',
+        validateInput: (value) => {
+          if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return 'Please use YYYY-MM-DD format';
+          }
+          return undefined;
+        },
+      });
+      if (!dateStr) {
+        return false;
+      }
+      const [year, month, day] = dateStr.split('-').map(Number);
+      dueAt = new Date(year, month - 1, day);
+    } else if (label === '$(close) Clear due date') {
+      clearDue = true;
+    } else if (label === '$(edit) Enter name...') {
+      assignee = await vscode.window.showInputBox({
+        prompt: 'Enter assignee name',
+        placeHolder: 'e.g., John Doe',
+      });
+      if (!assignee) {
+        return false;
+      }
+    } else if (label === '$(close) Unassign') {
+      clearAssignee = true;
+    } else if (label.startsWith('$(person)')) {
+      // Selected a contributor
+      assignee = label.replace(/^\$\([^)]+\)\s*/, '');
+    } else {
       return false;
     }
 
-    let dueAt: Date;
-    const now = new Date();
+    // Apply changes
+    let success = true;
 
-    switch (dateChoice.label) {
-      case '$(calendar) Today':
-        dueAt = new Date(now);
-        break;
-      case '$(arrow-right) Tomorrow':
-        dueAt = new Date(now);
-        dueAt.setDate(dueAt.getDate() + 1);
-        break;
-      case '$(calendar) Next week':
-        dueAt = new Date(now);
-        dueAt.setDate(dueAt.getDate() + 7);
-        break;
-      case '$(calendar) Next month':
-        dueAt = new Date(now);
-        dueAt.setMonth(dueAt.getMonth() + 1);
-        break;
-      case '$(edit) Custom date':
-        const dateStr = await vscode.window.showInputBox({
-          prompt: 'Enter date (YYYY-MM-DD)',
-          placeHolder: 'YYYY-MM-DD',
-          validateInput: (value) => {
-            if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-              return 'Please use YYYY-MM-DD format';
-            }
-            return undefined;
-          },
-        });
-
-        if (!dateStr) {
-          return false;
-        }
-
-        const [year, month, day] = dateStr.split('-').map(Number);
-        dueAt = new Date(year, month - 1, day);
-        break;
-      default:
-        return false;
-    }
-
-    const success = await this.syncService.addReminder(todo, dueAt);
-    
-    if (success) {
-      vscode.window.showInformationMessage(
-        `📅 Reminder set for ${dueAt.toLocaleDateString()}`
-      );
+    if (dueAt) {
+      success = await this.syncService.updateMetadata(todo, dueAt, todo.assignee);
+      if (success) {
+        vscode.window.showInformationMessage(`📅 Due date set to ${dueAt.toLocaleDateString()}`);
+      }
+    } else if (clearDue) {
+      success = await this.syncService.removeReminder(todo);
+      if (success) {
+        vscode.window.showInformationMessage('📅 Due date cleared');
+      }
+    } else if (assignee) {
+      await this.scanner.setAssignee(todo.id, assignee);
+      success = await this.syncService.updateMetadata(todo, todo.dueDate, assignee);
+      if (success) {
+        vscode.window.showInformationMessage(`👤 Assigned to ${assignee}`);
+      }
+    } else if (clearAssignee) {
+      await this.scanner.setAssignee(todo.id, undefined);
+      success = await this.syncService.removeAssignee(todo);
+      if (success) {
+        vscode.window.showInformationMessage('👤 Assignee cleared');
+      }
     }
 
     return success;
+  }
+
+  /**
+   * Set reminder for a TODO - simplified, just calls editTodoInteractive
+   */
+  async setTodoReminderInteractive(todo: DetectedTodo): Promise<boolean> {
+    return this.editTodoInteractive(todo);
+  }
+
+  /**
+   * Assign a TODO to someone - simplified, just calls editTodoInteractive
+   */
+  async assignTodoInteractive(todo: DetectedTodo): Promise<boolean> {
+    return this.editTodoInteractive(todo);
   }
 
   dispose(): void {

@@ -50,7 +50,13 @@ export class TodoTreeItem extends vscode.TreeItem {
     // Clean label without emoji - let ThemeIcon handle the visual
     this.displayLabel = todo.description;
     this.label = todo.description;
-    this.description = path.basename(todo.filePath);
+    
+    // Description shows file name and assignee if present
+    let descParts: string[] = [path.basename(todo.filePath)];
+    if (todo.assignee) {
+      descParts.push(`👤 ${todo.assignee}`);
+    }
+    this.description = descParts.join(' • ');
     
     // Tooltip with full info
     let tooltip = `${todo.type}: ${todo.description}\n`;
@@ -58,6 +64,9 @@ export class TodoTreeItem extends vscode.TreeItem {
     tooltip += `Line: ${todo.lineNumber + 1}`;
     if (todo.dueDate) {
       tooltip += `\nDue: ${todo.dueDate.toLocaleDateString()}`;
+    }
+    if (todo.assignee) {
+      tooltip += `\nAssigned to: ${todo.assignee}`;
     }
     this.tooltip = tooltip;
 

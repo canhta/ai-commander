@@ -25,9 +25,20 @@ export const DEFAULT_TODO_PATTERNS: TodoPattern[] = [
 ];
 
 /**
- * Date pattern: @2024-12-01 or @tomorrow or @next-week or @next-month
+ * Date pattern: due@2024-12-01 (only YYYY-MM-DD format)
  */
-export const DATE_PATTERN = /@(\d{4}-\d{2}-\d{2}|today|tomorrow|next-week|next-month)/i;
+export const DATE_PATTERN = /due@(\d{4}-\d{2}-\d{2})/i;
+
+/**
+ * Assignee pattern: @assigned:name (name can include spaces if quoted or use underscores)
+ */
+export const ASSIGNEE_PATTERN = /@assigned:([^,)]+)/i;
+
+/**
+ * Combined metadata pattern at end of line: (due@date, @assigned:name)
+ * Captures the full metadata block
+ */
+export const METADATA_PATTERN = /\s*\(([^)]+)\)\s*$/;
 
 /**
  * Priority levels for TODOs
@@ -51,6 +62,7 @@ export interface DetectedTodo {
   description: string;          // extracted description without the type tag
   dueDate?: Date;               // parsed from @date
   dueDateRaw?: string;          // original date string (@2024-12-01)
+  assignee?: string;            // assigned contributor
   priority: TodoPriority;
   status: TodoStatus;
   createdAt?: Date;             // when first detected
@@ -81,7 +93,23 @@ export interface TodoScannerConfig {
   excludePatterns: string[];    // glob patterns to exclude
   scanOnSave: boolean;
   customPatterns: string[];     // user-defined regex patterns
+  metadataFormat: {
+    datePattern: string;        // regex pattern to match due date (must have capture group for date)
+    assigneePattern: string;    // regex pattern to match assignee (must have capture group for name)
+    metadataWrapper: string;    // format for wrapping metadata, e.g., "({metadata})"
+    dateSeparator: string;      // separator between metadata items, e.g., ", "
+  };
 }
+
+/**
+ * Default metadata format configuration
+ */
+export const DEFAULT_METADATA_FORMAT = {
+  datePattern: 'due@(\\d{4}-\\d{2}-\\d{2})',
+  assigneePattern: '@assigned:([^,)]+)',
+  metadataWrapper: '({metadata})',
+  dateSeparator: ', ',
+};
 
 /**
  * Default scanner configuration
@@ -91,6 +119,7 @@ export const DEFAULT_SCANNER_CONFIG: TodoScannerConfig = {
   excludePatterns: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/out/**', '**/.git/**', '**/vendor/**', '**/__pycache__/**', '**/target/**'],
   scanOnSave: true,
   customPatterns: [],
+  metadataFormat: DEFAULT_METADATA_FORMAT,
 };
 
 /**
@@ -102,6 +131,7 @@ export interface StoredTodoMeta {
   snoozedUntil?: string;        // ISO date string
   completedAt?: string;         // ISO date string
   createdAt: string;            // ISO date string
+  assignee?: string;            // assigned contributor
 }
 
 /**

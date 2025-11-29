@@ -262,8 +262,8 @@
       },
       {
         "command": "cmdify.todo.setReminder",
-        "title": "Set Reminder",
-        "icon": "$(calendar)",
+        "title": "Edit TODO...",
+        "icon": "$(edit)",
         "category": "Cmdify TODOs"
       },
       {
@@ -450,7 +450,7 @@
         {
           "command": "cmdify.todo.markDone",
           "when": "view == cmdify.todos && viewItem == todo",
-          "group": "1_todo@2"
+          "group": "1_todo@3"
         },
         {
           "command": "cmdify.todo.delete",
@@ -774,6 +774,39 @@
             "default": [],
             "markdownDescription": "Custom regex patterns to detect TODOs. Each pattern should have a capture group for the description.",
             "order": 4
+          },
+          "cmdify.todos.metadataFormat": {
+            "type": "object",
+            "default": {
+              "datePattern": "due@(\\d{4}-\\d{2}-\\d{2})",
+              "assigneePattern": "@assigned:([^,)]+)",
+              "metadataWrapper": "({metadata})",
+              "dateSeparator": ", "
+            },
+            "properties": {
+              "datePattern": {
+                "type": "string",
+                "default": "due@(\\d{4}-\\d{2}-\\d{2})",
+                "description": "Regex pattern to match due date. Must have a capture group for the date (YYYY-MM-DD)."
+              },
+              "assigneePattern": {
+                "type": "string",
+                "default": "@assigned:([^,)]+)",
+                "description": "Regex pattern to match assignee. Must have a capture group for the name."
+              },
+              "metadataWrapper": {
+                "type": "string",
+                "default": "({metadata})",
+                "description": "Format for wrapping metadata. Use {metadata} as placeholder."
+              },
+              "dateSeparator": {
+                "type": "string",
+                "default": ", ",
+                "description": "Separator between metadata items (date and assignee)."
+              }
+            },
+            "markdownDescription": "Configure how TODO metadata (due date and assignee) is formatted in comments.\n\n**Examples:**\n- Default: `// TODO: Fix bug (due@2025-12-01, @assigned:John)`\n- Jira-style: `// TODO: Fix bug [due:2025-12-01] [assignee:John]`",
+            "order": 5
           },
           "cmdify.todos.notificationSound": {
             "type": "boolean",
