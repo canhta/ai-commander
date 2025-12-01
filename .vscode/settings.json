@@ -12,7 +12,6 @@
     "typescript.tsc.autoDetect": "off",
     "cSpell.words": [
         "cmdify",
-        "Ollama",
         "Pomodoro",
         "pycache",
         "Rescan"

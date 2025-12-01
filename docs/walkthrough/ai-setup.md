@@ -8,8 +8,8 @@ Generate CLI commands from natural language. Describe what you want, get the com
 |----------|----------|
 | **OpenAI** | Fast, reliable (GPT-4.1-nano, GPT-5-nano - best value) |
 | **Anthropic** | Complex commands (Claude 3.5 Sonnet) |
-| **Ollama** | Free, local — no API key needed |
 | **Azure OpenAI** | Enterprise environments |
+| **Custom** | Any API (local servers, third-party services) |
 
 ## Setup
 

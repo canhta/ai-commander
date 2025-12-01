@@ -87,16 +87,16 @@ export class OnboardingService implements vscode.Disposable {
         icon: AI_PROVIDER_EMOJIS['anthropic'],
       },
       {
-        id: 'ollama',
-        name: 'Ollama',
-        description: 'Local, free - runs on your machine',
-        icon: AI_PROVIDER_EMOJIS['ollama'],
-      },
-      {
         id: 'azure',
         name: 'Azure OpenAI',
         description: 'Enterprise Azure deployment',
         icon: AI_PROVIDER_EMOJIS['azure'],
+      },
+      {
+        id: 'custom',
+        name: 'Custom',
+        description: 'Any API endpoint (local or remote)',
+        icon: AI_PROVIDER_EMOJIS['custom'] || '🔧',
       },
     ];
   }

@@ -217,7 +217,6 @@ export const FEATURE_EMOJIS: Record<string, string> = {
 export const AI_PROVIDER_EMOJIS: Record<string, string> = {
   openai: '🧠',
   anthropic: '🤖',
-  ollama: '🦙',
   azure: '☁️',
   custom: '⚙️',
 };

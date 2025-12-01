@@ -4,7 +4,6 @@ import { AIProvider } from './services/ai';
 import {
   OpenAIProvider,
   AnthropicProvider,
-  OllamaProvider,
   AzureOpenAIProvider,
   CustomProvider,
 } from './ai/providers';
@@ -90,8 +89,10 @@ async function checkAIConfigured(context: vscode.ExtensionContext): Promise<bool
   const config = vscode.workspace.getConfiguration('cmdify.ai');
   const providerName = config.get<string>('provider', 'openai');
 
-  if (providerName === 'ollama') {
-    return true;
+  // Custom provider may not require API key
+  if (providerName === 'custom') {
+    const customEndpoint = config.get<string>('customEndpoint');
+    return !!customEndpoint;
   }
 
   const apiKey = await context.secrets.get(`cmdify.${providerName}`);
@@ -385,7 +386,6 @@ async function initializeAIProvider(
   const providers: Record<string, () => AIProvider> = {
     openai: () => new OpenAIProvider(context.secrets),
     anthropic: () => new AnthropicProvider(context.secrets),
-    ollama: () => new OllamaProvider(),
     azure: () => new AzureOpenAIProvider(context.secrets),
     custom: () => new CustomProvider(context.secrets),
   };

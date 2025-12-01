@@ -34,7 +34,6 @@
     "gpt",
     "anthropic",
     "claude",
-    "ollama",
     "pomodoro",
     "focus",
     "timer",
@@ -97,7 +96,7 @@
       },
       {
         "view": "cmdify.commands",
-        "contents": "Welcome to Cmdify! ✨\n\nTo get started, configure your AI provider to generate commands from natural language.\n\n[$(key) Configure AI Provider](command:cmdify.configureAI)\n\n**Supported providers:**\n- OpenAI (GPT-4.1-nano, GPT-5-nano - best value)\n- Anthropic (Claude)\n- Ollama (Local, free)\n- Azure OpenAI\n- Custom endpoints",
+        "contents": "Welcome to Cmdify! ✨\n\nTo get started, configure your AI provider to generate commands from natural language.\n\n[$(key) Configure AI Provider](command:cmdify.configureAI)\n\n**Supported providers:**\n- OpenAI (GPT-4.1-nano, GPT-5-nano - best value)\n- Anthropic (Claude)\n- Azure OpenAI\n- Custom (any API endpoint)",
         "when": "cmdify.aiNotConfigured"
       },
       {
@@ -574,16 +573,14 @@
             "enum": [
               "openai",
               "anthropic",
-              "ollama",
               "azure",
               "custom"
             ],
             "enumDescriptions": [
               "OpenAI (GPT-4.1-nano, GPT-4o-mini, GPT-5)",
               "Anthropic (Claude Sonnet, Claude Haiku)",
-              "Ollama - Local models (no API key needed)",
               "Azure OpenAI Service",
-              "Custom OpenAI-compatible endpoint"
+              "Custom API endpoint (any OpenAI-compatible or Google-style API)"
             ],
             "default": "openai",
             "markdownDescription": "AI provider for command generation. Run the **[Cmdify: Configure AI Provider](command:cmdify.configureAI)** command to set up your API key.",
@@ -600,6 +597,38 @@
             "default": "",
             "description": "Custom API endpoint (required for Azure and Custom providers)",
             "order": 3
+          },
+          "cmdify.ai.customApiFormat": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "google",
+              "generic"
+            ],
+            "enumDescriptions": [
+              "OpenAI-compatible API (chat/completions format)",
+              "Google-style API (generateContent format)",
+              "Generic text API (prompt/response format)"
+            ],
+            "default": "openai",
+            "description": "API format for custom provider",
+            "order": 4
+          },
+          "cmdify.ai.customApiKeyHeader": {
+            "type": "string",
+            "enum": [
+              "Authorization",
+              "X-goog-api-key",
+              "X-API-Key"
+            ],
+            "enumDescriptions": [
+              "Bearer token (Authorization: Bearer <key>)",
+              "Google API key (X-goog-api-key: <key>)",
+              "Generic API key header (X-API-Key: <key>)"
+            ],
+            "default": "Authorization",
+            "description": "HTTP header for API key authentication",
+            "order": 5
           },
           "cmdify.ai.setupApiKey": {
             "type": "null",

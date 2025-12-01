@@ -188,7 +188,7 @@ export class OnboardingPanelProvider extends BaseWebviewPanel {
                 .map(
                   (p) => `
                 <div class="ai-provider" onclick="configureAI('${p.id}')">
-                  <span class="icon">${p.id === 'openai' ? icon('brain', 24) : p.id === 'anthropic' ? icon('bot', 24) : p.id === 'ollama' ? icon('terminal', 24) : icon('cloud', 24)}</span>
+                  <span class="icon">${p.id === 'openai' ? icon('brain', 24) : p.id === 'anthropic' ? icon('bot', 24) : p.id === 'custom' ? icon('settings', 24) : icon('cloud', 24)}</span>
                   <div class="info">
                     <div class="name">${p.name}</div>
                     <div class="description">${p.description}</div>

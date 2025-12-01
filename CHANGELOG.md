@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **AI-Powered Command Generation**
 - Generate CLI commands from natural language descriptions
-- Support for OpenAI, Anthropic Claude, Ollama, Azure OpenAI, and custom endpoints
+- Support for OpenAI, Anthropic Claude, Azure OpenAI, and custom endpoints
 - Smart detection of natural language vs direct commands
 - Command library with tags, favorites, and fuzzy search
 - Dynamic variables with `{{placeholder}}` syntax

@@ -5,7 +5,6 @@
 
 import * as vscode from 'vscode';
 import { AIProvider } from '../../services/ai';
-import { OllamaProvider } from '../../ai/providers';
 import { ActivityPanelProvider } from '../../views/activityPanel';
 import { AchievementPanelProvider } from '../../views/achievementPanel';
 import { OnboardingService } from '../../services/onboarding';
@@ -122,11 +121,6 @@ async function configureAIProvider(
       description: 'Claude Sonnet, Claude Haiku',
     },
     {
-      label: 'Ollama',
-      value: 'ollama',
-      description: 'Local models (no API key needed)',
-    },
-    {
       label: 'Azure OpenAI',
       value: 'azure',
       description: 'Azure-hosted OpenAI models',
@@ -134,7 +128,7 @@ async function configureAIProvider(
     {
       label: 'Custom',
       value: 'custom',
-      description: 'Custom OpenAI-compatible endpoint',
+      description: 'Any API endpoint (local or remote)',
     },
   ];
 
@@ -168,24 +162,22 @@ async function configureAIProvider(
     return;
   }
 
-  // Step 3: Enter API key (if required)
-  if (selectedProvider.value !== 'ollama') {
-    const existingKey = await context.secrets.get(`cmdify.${selectedProvider.value}`);
-    const apiKey = await vscode.window.showInputBox({
-      prompt: `Enter your ${selectedProvider.label} API key`,
-      password: true,
-      placeHolder: selectedProvider.value === 'azure' ? 'Your Azure API key' : 'sk-...',
-      title: `Step 3: ${selectedProvider.label} API Key`,
-      value: existingKey ? '' : undefined,
-      validateInput: (value) => (!value && !existingKey ? 'API key is required' : undefined),
-    });
+  // Step 3: Enter API key
+  const existingKey = await context.secrets.get(`cmdify.${selectedProvider.value}`);
+  const apiKey = await vscode.window.showInputBox({
+    prompt: `Enter your ${selectedProvider.label} API key`,
+    password: true,
+    placeHolder: selectedProvider.value === 'azure' ? 'Your Azure API key' : 'sk-...',
+    title: `Step 3: ${selectedProvider.label} API Key`,
+    value: existingKey ? '' : undefined,
+    validateInput: (value) => (!value && !existingKey ? 'API key is required' : undefined),
+  });
 
-    if (apiKey === undefined) {
-      return;
-    }
-    if (apiKey) {
-      await context.secrets.store(`cmdify.${selectedProvider.value}`, apiKey);
-    }
+  if (apiKey === undefined) {
+    return;
+  }
+  if (apiKey) {
+    await context.secrets.store(`cmdify.${selectedProvider.value}`, apiKey);
   }
 
   // Step 4: Azure-specific configuration
@@ -236,10 +228,46 @@ async function configureCustomProvider(
   setAIProvider: (provider: AIProvider | undefined) => void,
   updateAIConfiguredContext: () => Promise<void>
 ): Promise<void> {
+  // Step 2: Select API format
+  const apiFormats: QuickPickItemWithValue[] = [
+    {
+      label: 'OpenAI Compatible',
+      value: 'openai',
+      description: 'Standard chat/completions API',
+    },
+    {
+      label: 'Google Style',
+      value: 'google',
+      description: 'Google generateContent API format',
+    },
+    {
+      label: 'Generic',
+      value: 'generic',
+      description: 'Simple prompt/response format',
+    },
+  ];
+
+  const selectedFormat = await vscode.window.showQuickPick(apiFormats, {
+    placeHolder: 'Select API format',
+    title: 'Step 2: Select API Format',
+    ignoreFocusOut: true,
+  });
+
+  if (!selectedFormat) {
+    return;
+  }
+
+  // Step 3: Enter endpoint
+  const endpointPlaceholder =
+    selectedFormat.value === 'google'
+      ? 'https://api.example.com/v1/models/model-name:generateContent'
+      : 'https://api.example.com/v1/chat/completions';
+
   const endpoint = await vscode.window.showInputBox({
     prompt: 'Enter your custom API endpoint',
-    placeHolder: 'https://api.example.com/v1/chat/completions',
-    title: 'Step 2: Custom API Endpoint',
+    placeHolder: endpointPlaceholder,
+    title: 'Step 3: Custom API Endpoint',
+    ignoreFocusOut: true,
     validateInput: (value) => {
       if (!value) {
         return 'Endpoint is required';
@@ -255,31 +283,89 @@ async function configureCustomProvider(
     return;
   }
 
-  const modelName = await vscode.window.showInputBox({
+  // Step 4: Model name
+  let modelName = 'custom-model';
+  // For Google-style APIs, try to extract model from URL
+  if (selectedFormat.value === 'google') {
+    const modelMatch = endpoint.match(/models\/([^:]+)/);
+    if (modelMatch) {
+      modelName = modelMatch[1];
+    }
+  }
+
+  const inputModel = await vscode.window.showInputBox({
     prompt: 'Enter the model name to use',
-    placeHolder: 'gpt-4o-mini, llama-3.1-70b, etc.',
-    title: 'Step 3: Model Name',
+    placeHolder: 'model-name, gpt-4o-mini, llama-3.1-70b, etc.',
+    title: 'Step 4: Model Name',
+    value: modelName !== 'custom-model' ? modelName : undefined,
+    ignoreFocusOut: true,
     validateInput: (value) => (!value ? 'Model name is required' : undefined),
   });
 
-  if (!modelName) {
+  if (!inputModel) {
+    return;
+  }
+  modelName = inputModel;
+
+  // Step 5: API Key header type
+  const apiKeyHeaders: QuickPickItemWithValue[] = [
+    {
+      label: 'Bearer Token',
+      value: 'Authorization',
+      description: 'Authorization: Bearer <key>',
+    },
+    {
+      label: 'API Key Header',
+      value: 'X-goog-api-key',
+      description: 'X-goog-api-key: <key>',
+    },
+    {
+      label: 'X-API-Key',
+      value: 'X-API-Key',
+      description: 'X-API-Key: <key>',
+    },
+  ];
+
+  // Default to API Key header for Google-style format
+  const defaultHeaderIndex = selectedFormat.value === 'google' ? 1 : 0;
+  const reorderedHeaders = [
+    apiKeyHeaders[defaultHeaderIndex],
+    ...apiKeyHeaders.filter((_, i) => i !== defaultHeaderIndex),
+  ];
+
+  const selectedHeader = await vscode.window.showQuickPick(reorderedHeaders, {
+    placeHolder: 'Select API key header type',
+    title: 'Step 5: API Key Header',
+    ignoreFocusOut: true,
+  });
+
+  if (!selectedHeader) {
     return;
   }
 
+  // Step 6: API Key
   const apiKey = await vscode.window.showInputBox({
     prompt: 'Enter API key (leave empty if not required)',
     password: true,
-    placeHolder: 'API key (optional)',
-    title: 'Step 4: API Key (Optional)',
+    placeHolder: 'API key',
+    title: 'Step 6: API Key',
+    ignoreFocusOut: true,
   });
 
   if (apiKey === undefined) {
     return;
   }
 
+  // Save all configuration
   await config.update('provider', 'custom', vscode.ConfigurationTarget.Global);
   await config.update('customEndpoint', endpoint, vscode.ConfigurationTarget.Global);
   await config.update('model', modelName, vscode.ConfigurationTarget.Global);
+  await config.update('customApiFormat', selectedFormat.value, vscode.ConfigurationTarget.Global);
+  await config.update(
+    'customApiKeyHeader',
+    selectedHeader.value,
+    vscode.ConfigurationTarget.Global
+  );
 
   if (apiKey) {
     await context.secrets.store('cmdify.custom', apiKey);
@@ -288,7 +374,9 @@ async function configureCustomProvider(
   const aiProvider = await initializeAIProvider(context);
   setAIProvider(aiProvider);
   await updateAIConfiguredContext();
-  vscode.window.showInformationMessage(`AI configured: Custom provider with ${modelName}`);
+  vscode.window.showInformationMessage(
+    `AI configured: Custom provider (${selectedFormat.label}) with ${modelName}`
+  );
 }
 
 /**
@@ -358,16 +446,6 @@ async function getModelsForProvider(provider: string): Promise<QuickPickItemWith
     ],
   };
 
-  if (provider === 'ollama') {
-    const ollamaProvider = new OllamaProvider();
-    const models = await ollamaProvider.getAvailableModels();
-    return models.map((model) => ({
-      label: model,
-      value: model,
-      description: model.includes('code') ? 'Optimized for code' : undefined,
-    }));
-  }
-
   return modelConfigs[provider] || [];
 }
 
@@ -386,7 +464,6 @@ async function initializeAIProvider(
   const providers: Record<string, () => AIProvider> = {
     openai: () => new OpenAIProvider(context.secrets),
     anthropic: () => new AnthropicProvider(context.secrets),
-    ollama: () => new OllamaProvider(),
     azure: () => new AzureOpenAIProvider(context.secrets),
     custom: () => new CustomProvider(context.secrets),
   };

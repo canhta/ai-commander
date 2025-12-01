@@ -23,7 +23,7 @@ AI command generation, focus timer, TODO scanner, code notes, and achievements.
 ## Features
 
 **🤖 AI Command Generation**  
-Supports OpenAI, Anthropic Claude, Ollama (local/free), Azure OpenAI, and custom endpoints.
+Supports OpenAI, Anthropic Claude, Azure OpenAI, and custom endpoints (any OpenAI-compatible or Google-style API).
 
 **📚 Command Library**  
 Save, organize with tags, and reuse commands. Sync across machines via GitHub Gist.
@@ -43,7 +43,7 @@ Select code and add notes directly in your editor. Notes are saved at workspace 
 2. Select your provider and enter API key
 3. Choose a model
 
-> 💡 **Ollama** runs locally — no API key needed!
+> 💡 **Custom provider** supports any API: local servers, self-hosted models, or third-party services.
 
 ## Key Commands
 
