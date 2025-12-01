@@ -69,7 +69,7 @@ Select code and add notes directly in your editor. Notes are saved at workspace 
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `cmdify.ai.provider` | AI provider | `openai` |
-| `cmdify.ai.model` | Model to use | `gpt-4o-mini` |
+| `cmdify.ai.model` | Model to use | `gpt-4.1-nano` |
 | `cmdify.focus.focusDuration` | Focus duration (min) | `25` |
 | `cmdify.todos.scanOnSave` | Auto-scan on save | `true` |
 

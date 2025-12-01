@@ -6,7 +6,7 @@ Generate CLI commands from natural language. Describe what you want, get the com
 
 | Provider | Best For |
 |----------|----------|
-| **OpenAI** | Fast, reliable (GPT-4o, GPT-4o-mini) |
+| **OpenAI** | Fast, reliable (GPT-4.1-nano, GPT-5-nano - best value) |
 | **Anthropic** | Complex commands (Claude 3.5 Sonnet) |
 | **Ollama** | Free, local — no API key needed |
 | **Azure OpenAI** | Enterprise environments |

@@ -13,7 +13,7 @@ export class AzureOpenAIProvider implements AIProvider {
 
   async generate(prompt: string, context: AIContext): Promise<AIResponse> {
     const apiKey = await getApiKey(this.secretStorage, 'azure');
-    const config = getAIConfig('gpt-4o-mini');
+    const config = getAIConfig('gpt-4.1-nano');
 
     if (!config.customEndpoint) {
       throw new Error(

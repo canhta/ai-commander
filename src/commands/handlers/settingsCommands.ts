@@ -114,7 +114,7 @@ async function configureAIProvider(
     {
       label: 'OpenAI',
       value: 'openai',
-      description: 'GPT-4o, GPT-4o-mini, GPT-4 Turbo',
+      description: 'GPT-4.1-nano (cheapest), GPT-4o-mini, GPT-4.1',
     },
     {
       label: 'Anthropic',
@@ -298,20 +298,36 @@ async function getModelsForProvider(provider: string): Promise<QuickPickItemWith
   const modelConfigs: Record<string, QuickPickItemWithValue[]> = {
     openai: [
       {
+        label: 'GPT-5 Nano',
+        value: 'gpt-5-nano',
+        description: '⭐ Best value - Cheapest ($0.05/1M input, $0.40 output)',
+      },
+      {
+        label: 'GPT-4.1 Nano',
+        value: 'gpt-4.1-nano',
+        description: 'Recommended - Very cheap ($0.10/1M input, $0.40 output)',
+      },
+      {
         label: 'GPT-4o Mini',
         value: 'gpt-4o-mini',
-        description: 'Recommended - Fast and cost-effective',
-      },
-      { label: 'GPT-4o', value: 'gpt-4o', description: 'Most capable' },
-      {
-        label: 'GPT-4 Turbo',
-        value: 'gpt-4-turbo',
-        description: 'Previous generation',
+        description: 'Proven quality ($0.15/1M input, $0.60 output)',
       },
       {
-        label: 'GPT-3.5 Turbo',
-        value: 'gpt-3.5-turbo',
-        description: 'Budget option',
+        label: 'GPT-5 Mini',
+        value: 'gpt-5-mini',
+        description: 'Latest mini ($0.25/1M input, $2 output)',
+      },
+      {
+        label: 'GPT-4.1 Mini',
+        value: 'gpt-4.1-mini',
+        description: 'Balanced ($0.40/1M input, $1.60 output)',
+      },
+      { label: 'GPT-4.1', value: 'gpt-4.1', description: 'Flagship ($2/1M input, $8 output)' },
+      { label: 'GPT-4o', value: 'gpt-4o', description: 'Capable ($2.50/1M input, $10 output)' },
+      {
+        label: 'GPT-5',
+        value: 'gpt-5',
+        description: 'Latest flagship ($1.25/1M input, $10 output)',
       },
     ],
     anthropic: [

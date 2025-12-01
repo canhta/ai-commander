@@ -15,7 +15,7 @@ export class OpenAIProvider implements AIProvider {
 
   async generate(prompt: string, context: AIContext): Promise<AIResponse> {
     const apiKey = await getApiKey(this.secretStorage, 'openai');
-    const config = getAIConfig('gpt-4o-mini');
+    const config = getAIConfig('gpt-4.1-nano');
 
     return generateOpenAICompatible(
       config.customEndpoint || this.endpoint,

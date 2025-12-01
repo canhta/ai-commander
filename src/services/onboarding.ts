@@ -77,7 +77,7 @@ export class OnboardingService implements vscode.Disposable {
       {
         id: 'openai',
         name: 'OpenAI',
-        description: 'GPT-4o, GPT-4o-mini',
+        description: 'GPT-4.1-nano, GPT-5-nano (best value)',
         icon: AI_PROVIDER_EMOJIS['openai'],
       },
       {
